@@ -56,9 +56,9 @@ exports.run = () => {
 	mockSocket.send = validateA1ZeroPub
 	currentTest = 'noSuchServer'
 	runTest(sendNoSuchServer, noSuchServerError, 1, new Uint8Array(32))
-
+	
 	if (passCount === testCount) {
-		console.log('======= ALL A1A2 TESTS PASSED! =======\n')
+		console.log('======= ALL ' + testCount + ' A1A2 TESTS PASSED! =======\n')
 	} else {
 		console.log('======= ' + passCount + '/' + testCount +
 			 ' OF A1A2 TESTS PASSED! =======\n')
@@ -492,7 +492,7 @@ function stateAfterA1A2() {
 function outcome(success, msg) {
 	if (success) {
 		passCount++
-		console.log(currentTest + ' PASSED')
+		//console.log(currentTest + ' PASSED')
 	} else {
 		console.log(currentTest + ' FAILED! \n' + msg)
 	}

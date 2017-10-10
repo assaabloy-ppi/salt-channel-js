@@ -17,6 +17,7 @@ module.exports = (ws, thresh = 5000) => {
 	const STATE_A1A2 = 'a1a2'
 	const STATE_HAND = 'handshake'
 	const STATE_READY = 'ready'
+	const STATE_LAST = 'last'
 	
 	const ADDR_TYPE_ANY = 0
 	const ADDR_TYPE_PUB = 1
@@ -59,7 +60,6 @@ module.exports = (ws, thresh = 5000) => {
 	let timeSupported
 	let cEpoch
 	let sEpoch
-	
 	
 	let telemetry
 	let saltState
@@ -380,7 +380,7 @@ module.exports = (ws, thresh = 5000) => {
 			setInt32(m4, cEpoch - util.currentTimeMs(), 2)
 		}
 		
-		let encrypted = encrypt(m4)
+		let encrypted = encrypt(false, m4)
 		
 		sendOnWs(encrypted.buffer)
 		
@@ -483,6 +483,9 @@ module.exports = (ws, thresh = 5000) => {
 			'Expected 5 0 or 11 0, was: ' + clear[0] + ' ' + clear[1])
 			return
 		}
+		if (saltState === STATE_LAST) {
+			reset()
+		}
 	}
 	
 	function handleMultiAppPacket(multiAppPacket) {
@@ -520,7 +523,12 @@ module.exports = (ws, thresh = 5000) => {
 	}
 	
 	function decrypt(message) {
-		if (!validHeader(message, 6, 0)) {
+		if (validHeader(message, 6, 0)) {
+			// Regular message
+		} else if (validHeader(message, 6, 1)) {
+			// Last message
+			saltState = STATE_LAST;
+		} else {
 			error('Bad packet header. Expected ' + 6 + ' ' + 0 + 
 			' was ' + message[0] + ' ' + message[1])
 			return null
@@ -602,31 +610,38 @@ module.exports = (ws, thresh = 5000) => {
 		uints.set(uint16, offset)
 	}
 	
-	function send(arg) {
-		if (arguments.length === 0) {
+	function send(last, arg) {
+		if (last) {
+			saltState = STATE_LAST
+		}
+		if (arguments.length < 2) {
 			return
 		}
-		if (arguments.length === 1) {
+		if (arguments.length === 2) {
 			if (util.isArray(arg)) {
 				if (arg.length === 1) {
-					sendAppPacket(arg[0])
+					sendAppPacket(last, arg[0])
 				} else {
-					sendMultiAppPacket(arg)
+					sendMultiAppPacket(last, arg)
 				}
 			} else {
-				sendAppPacket(arg)
+				sendAppPacket(last, arg)
 			}
 		} else {
 			// turn arguments into an array
 			let arr = []
-			for (let i = 0; i < arguments.length; i++) {
-				arr[i] = arguments[i]
+			for (let i = 1; i < arguments.length; i++) {
+				arr[i-1] = arguments[i]
 			}
-			sendMultiAppPacket(arr)
+			sendMultiAppPacket(last, arr)
+		}
+		
+		if (saltState === STATE_LAST) {
+			reset()
 		}
 	}
 	
-	function sendAppPacket(data) {
+	function sendAppPacket(last, data) {
 		let appPacket = new Uint8Array(data.length + 6)
 		
 		appPacket[0] = 5
@@ -636,11 +651,11 @@ module.exports = (ws, thresh = 5000) => {
 			setInt32(appPacket, cEpoch - util.currentTimeMs(), 2)
 		}
 	
-		let encrypted = encrypt(appPacket)
+		let encrypted = encrypt(last, appPacket)
 		sendOnWs(encrypted.buffer)
 	}
 	
-	function sendMultiAppPacket(arr) {
+	function sendMultiAppPacket(last, arr) {
 		if (arr.length > 65535) {
 			error('Too many application messages')
 			return
@@ -670,7 +685,7 @@ module.exports = (ws, thresh = 5000) => {
 			setInt32(multiAppPacket, cEpoch - util.currentTimeMs(), 2)
 		}
 		
-		let encrypted = encrypt(multiAppPacket)
+		let encrypted = encrypt(last, multiAppPacket)
 		sendOnWs(encrypted.buffer)
 	}
 	
@@ -680,12 +695,13 @@ module.exports = (ws, thresh = 5000) => {
 		multiAppPacket.set(uints, offset)
 	}
 	
-	function encrypt(clearBytes) {
+	function encrypt(last, clearBytes) {
 		let body = nacl.secretbox(clearBytes, eNonce, sessionKey)
 		eNonce = increaseNonce2(eNonce)
 	
 		let encryptedMessage = new Uint8Array(body.length + 2)
 		encryptedMessage[0] = 6
+		encryptedMessage[1] = last ? 1 : 0
 		encryptedMessage.set(body, 2)
 
 		return encryptedMessage

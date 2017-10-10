@@ -60,8 +60,9 @@ let currentTest
 let m4Delayed
 let passCount = 0
 let testCount = 0
-let multiAppPacketCount = 0;
-let multiAppPacketFailed = false;
+let multiAppPacketCount = 0
+let multiAppPacketFailed = false
+let lastFlag
 
 
 exports.run = () => {
@@ -71,13 +72,13 @@ exports.run = () => {
 	
 	currentTest = 'testWithServSigKey'
 	runTest(onHandshakeComplete, validateM1WithServSigKey, serverSigKeyPair.publicKey)
-	
+
 	currentTest = 'testWithAppPacket'
 	runTest(echoAppMessage, validateM1NoServSigKey)
 	
 	currentTest = 'testWithMultiAppPacket'
 	runTest(echoMultiAppMessage, validateM1NoServSigKey)
-
+	
 	currentTest = 'testWithBadEncryption'
 	runTest(receiveBadEncryption, validateM1NoServSigKey)
 	
@@ -92,13 +93,27 @@ exports.run = () => {
 	currentTest = 'testReceiveAfterDelayed'
 	testCount++
 	receiveAfterDelayed()
+	
+	currentTest = 'testreuseOldSaltChannel'
+	reuseOldSaltChannel(onHandshakeComplete, validateM1NoServSigKey)
+	
+	currentTest = 'testLastFlag'
+	testCount++
+	receiveLastFlag()
+	
+	currentTest = 'testStateAfterLastFlag'
+	testCount++
+	stateAfterLastFlag()
+	
+	currentTest = 'testSendLastFlag'
+	runTest(sendLastFlag, validateM1NoServSigKey)
+	
+	currentTest = 'testStateAfterSentLastFlag'
+	testCount++
+	stateAfterLastFlag()
 		
-	currentTest = 'testHandshakeAfterDelayed'
-	handshakeAfterDelayed(onHandshakeComplete, validateM1NoServSigKey)
-	
-	
 	if (passCount === testCount) {
-		console.log('======= ALL HANDSHAKE TESTS PASSED! =======\n')
+		console.log('======= ALL ' + testCount + ' HANDSHAKE TESTS PASSED! =======\n')
 	} else {
 		console.log('======= ' + passCount + '/' + testCount +
 			 ' OF HANDSHAKE TESTS PASSED! =======\n')
@@ -113,6 +128,7 @@ function runTest(handshakeCompleteCb, validateM1, sigKey) {
 	eNonce[0] = 2
 	dNonce[0] = 1
 	m4Delayed = false
+	lastFlag = false
 	
 	mockSocket.send = validateM1
 	
@@ -122,7 +138,7 @@ function runTest(handshakeCompleteCb, validateM1, sigKey) {
 	sc.handshake(clientSigKeyPair, clientEphKeyPair, sigKey)	
 }
 
-function handshakeAfterDelayed(handshakeCompleteCb, validateM1) {
+function reuseOldSaltChannel(handshakeCompleteCb, validateM1) {
 	testCount++
 	eNonce = new Uint8Array(nacl.secretbox.nonceLength)
 	dNonce = new Uint8Array(nacl.secretbox.nonceLength)
@@ -131,6 +147,8 @@ function handshakeAfterDelayed(handshakeCompleteCb, validateM1) {
 	m4Delayed = false
 	
 	mockSocket.send = validateM1
+	
+	sc.setOnHandshakeComplete(handshakeCompleteCb)
 		
 	sc.handshake(clientSigKeyPair, clientEphKeyPair)
 }
@@ -358,6 +376,7 @@ function validateM4(message) {
 		return
 	}
 	
+	
 	switch (currentTest) {
 		case 'testWithAppPacket':
 		case 'testSendOneInArray':
@@ -367,7 +386,7 @@ function validateM4(message) {
 		case 'testSendAsTwoArgs':
 			mockSocket.send = validateMultiAppPacket
 			break
-	}
+	}	
 }
 
 function validateAppPacket(message) {
@@ -496,9 +515,55 @@ function validateMultiAppPacket(message) {
 	}
 }
 
+function validateAppPacketLastFlag(message) {
+	let encryptedMessage = new Uint8Array(message)
+	let appPacket = decrypt(encryptedMessage)
+	
+	if (appPacket.length !== 7) {
+		outcome(false, '  Expected AppPacket.length 7, was ' + appPacket.length)
+		return
+	}
+	if (appPacket[0] !== 5) {
+		outcome(false, ' Expected AppPacket type, was ' + appPacket[0])
+		return
+	}
+	if (appPacket[1] !== 0) {
+		outcome(false, '  Expected zero byte, was ' + appPacket[1])
+		return
+	}
+	
+	let time = new Uint8Array(4)
+	time[0] = appPacket[2]
+	time[1] = appPacket[3]
+	time[2] = appPacket[4]
+	time[3] = appPacket[5]
+	
+	time = (new Int32Array(time.buffer))[0]
+	
+	if (util.currentTimeMs() - cEpoch > time + threshold ) {
+		outcome(false, '  AppPacket delayed')
+		return
+	}
+	
+	if (appPacket[6] !== 0) {
+		outcome(false, '  Unexpected data, expected 0, was ' + appPacket[6])
+		return
+	}
+	
+	if (lastFlag) {
+		outcome(true)
+	} else {
+		outcome(false, '  Expected lastFlag to have been set')
+	}
+}
+
 function decrypt(message) {
-	if (!(message[0] === 6 && message[1] === 0)) {
-		return '  EncryptedMessage: Bad packet header, expected 6 0, was  ' +
+	if (message[0] === 6 && message[1] === 0) {
+		
+	} else if (message[0] === 6 && message[1] === 1) {
+		lastFlag = true
+	} else {
+		return '  EncryptedMessage: Bad packet header, was  ' +
 				+ message[0] + ' ' + message[1]
 	}
 	
@@ -523,12 +588,14 @@ function decrypt(message) {
 	return copy
 }
 
-function encrypt(clearBytes) {
+function encrypt(clearBytes, last = false) {
 	let body = nacl.secretbox(clearBytes, eNonce, sessionKey)
 	eNonce = increaseNonce2(eNonce)
 
 	let encryptedMessage = new Uint8Array(body.length + 2)
 	encryptedMessage[0] = 6
+	encryptedMessage[1] = last ? 1 : 0
+	
 	for (let i = 0; i < body.length; i++) {
 		encryptedMessage[2+i] = body[i]
 	}
@@ -577,20 +644,33 @@ function increaseNonce2(nonce) {
 }
 
 function echoAppMessage() {
-	sc.send(new Uint8Array([0]))
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus)
+		return;
+	} 
+	sc.send(false, new Uint8Array([0]))
 	currentTest = 'testSendOneInArray'
 	testCount++
-	sc.send([new Uint8Array([0])])
+	sc.send(false, [new Uint8Array([0])])
 }
 
 function echoMultiAppMessage() {
-	sc.send([new Uint8Array([0]), new Uint8Array([1])])
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus)
+		return;
+	} 
+	sc.send(false, [new Uint8Array([0]), new Uint8Array([1])])
 	currentTest = 'testSendAsTwoArgs'
 	testCount++
-	sc.send(new Uint8Array([0]), new Uint8Array([1]))
+	sc.send(false, new Uint8Array([0]), new Uint8Array([1]))
 }
 
 function receiveBadEncryption() {
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus())
+		return;
+	} 
+	
 	sc.setOnerror(badEncryptionError)
 	
 	let appPacket = new Uint8Array(7)
@@ -611,7 +691,21 @@ function receiveBadEncryption() {
 	mockSocket.onmessage(evt);
 }
 
+function sendLastFlag() {
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus())
+		return
+	}
+	mockSocket.send = validateAppPacketLastFlag
+	sc.send(true, new Uint8Array(1));
+}
+
 function receiveDelayed() {
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus)
+		return;
+	} 
+	
 	sc.setOnerror(delayedPacketError)
 	
 	let appPacket = new Uint8Array(7)
@@ -645,6 +739,32 @@ function receiveAfterBadEncryption() {
 function receiveAfterDelayed() {
 	receiveAfterBadEncryption()
 }
+
+function receiveLastFlag() {
+	sc.setOnmessage(onAppPacket)
+	let appPacket = new Uint8Array(7)
+	appPacket[0] = 5
+	
+	let time = new Int32Array([util.currentTimeMs() - sEpoch])
+	time = new Uint8Array(time.buffer)
+	
+	appPacket.set(time, 2)
+		
+	let encrypted = encrypt(appPacket, true)
+	
+	let evt = {data: encrypted}
+	mockSocket.onmessage(evt);
+}
+
+function stateAfterLastFlag() {
+	if (sc.getState() !== 'init') {
+		outcome(false, '  Unexpected state after last flag ' + sc.getState())
+		return 
+	}
+	outcome(true)
+}
+
+
 
 function onAppPacket(message) {
 	if (util.uint8ArrayEquals(message, new Uint8Array(1))) {
@@ -701,10 +821,7 @@ function notReadyError(err) {
 	outcome(success, '  ' + msg)
 }
 
-function onHandshakeComplete() {
-	if (m4Delayed) {
-		return
-	}
+function onHandshakeComplete() {	
 	if (sc.getState() === 'ready') {
 		outcome(true)
 	} else {
@@ -718,7 +835,7 @@ function onHandshakeComplete() {
 function outcome(success, msg) {
 	if (success) {
 		passCount++
-		console.log(currentTest + ' PASSED')
+		//console.log(currentTest + ' PASSED')
 	} else {
 		console.log(currentTest + ' FAILED! \n' + msg)
 	}
