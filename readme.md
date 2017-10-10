@@ -37,17 +37,15 @@ Setting functions for receiving messages from Salt Channel
 ----------------------------------------------------------
 
 In order to receive messages from Salt Channel you must specify an appropriate callback for one or more events. 
-
 * onA2Response(prots) is executed by sc when sc has received and parsed A2
 * onSaltChannelError(err) is executed by sc when an error occurs in sc
 * onHandshakeComplete() is executed by sc directly after sc has sent M4
 * onMessage(message) is executed by sc when sc has decrypted and parsed a received message
 
-
-	sc.setOnA2Response(onA2Response) 
-	sc.setOnerror(onSaltChannelError) 
-	sc.setOnHandshakeComplete(onHandshakeComplete) 
-	sc.setOnmessage(onMessage) 
+		sc.setOnA2Response(onA2Response) 
+		sc.setOnerror(onSaltChannelError) 
+		sc.setOnHandshakeComplete(onHandshakeComplete) 
+		sc.setOnmessage(onMessage) 
 
 The A1A2 Session
 ----------------
