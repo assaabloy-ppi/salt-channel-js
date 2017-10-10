@@ -411,10 +411,6 @@ module.exports = (ws, thresh = 5000) => {
 	}
 	// =================================================
 	
-	function close() {
-		reset()
-	}
-	
 	function getTelemetry() {
 		return telemetry
 	}
@@ -735,14 +731,13 @@ module.exports = (ws, thresh = 5000) => {
 	
 	return {
 		a1a2: a1a2,
-		close: close,
 		handshake: handshake,
 		getTelemetry: getTelemetry,
 		getState: getState,
+		send: send,
 		setOnA2Response: setOnA2Response,
 		setOnerror: setOnerror,
 		setOnHandshakeComplete: setOnHandshakeComplete,
-		setOnmessage: setOnmessage,
-		send: send
+		setOnmessage: setOnmessage
 	}
 }
