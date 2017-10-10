@@ -43,6 +43,7 @@ In order to receive messages from Salt Channel you must specify an appropriate c
 * onHandshakeComplete() is executed by sc directly after sc has sent M4
 * onMessage(message) is executed by sc when sc has decrypted and parsed a received message
 
+
 	sc.setOnA2Response(onA2Response) 
 	sc.setOnerror(onSaltChannelError) 
 	sc.setOnHandshakeComplete(onHandshakeComplete) 
