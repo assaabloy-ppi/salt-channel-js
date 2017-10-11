@@ -46,3 +46,4 @@ All bytes are verified. For tests that raise an error the error message is verif
 14. stateAfterReceivedLastFlag - Use sc from 13. Verify that Salt Channel is in the init state
 15. sendLastFlag - Handshake. Do sc.send(true, zeroByte)
 16. stateAfterSentLastFlag - Use sc from 15. Verify that Salt Channel is in the init state
+17. withBadServSigKey - Handshake with server public key in M1 as 32 bytes of zero

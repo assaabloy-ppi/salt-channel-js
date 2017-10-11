@@ -270,8 +270,13 @@ module.exports = (ws, thresh = 5000) => {
 		let m2 = new Uint8Array(evt.data)
 		
 		// Header
-		if (!validHeader(m2, 2, 0)) {
-			error('M2: Bad packet header. Expected 2 0, was ' 
+		if (validHeader(m2, 2, 0)) {
+			
+		} else if (validHeader(m2, 2, 129)) {
+			error('M2: NoSuchServer exception')
+			return;
+		} else {
+			error('M2: Bad packet header. Expected 2 0 or 2 129, was ' 
 				+ m2[0] + ' ' + m2[1])
 			return
 		}

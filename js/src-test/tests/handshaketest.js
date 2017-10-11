@@ -99,6 +99,8 @@ exports.run = () => {
 	testSendLastFlag()
 
 	testStateAfterSentLastFlag()
+	
+	testWithBadServSigKey()
 		
 	if (passCount === testCount) {
 		console.log('======= ALL ' + testCount + ' HANDSHAKE TESTS PASSED! =======\n')
@@ -259,7 +261,14 @@ function testStateAfterSentLastFlag() {
 	verifyInit()
 }
 
-function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey) {	
+function testWithBadServSigKey() {
+	currentTest = 'withBadServSigKey'
+	testCount++
+	
+	newSaltChannelAndHandshake(null, validateM1BadServSigKey, new Uint8Array(32), noSuchServerError)
+}
+
+function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey, errorCb) {	
 	eNonce = new Uint8Array(nacl.secretbox.nonceLength)
 	dNonce = new Uint8Array(nacl.secretbox.nonceLength)
 	eNonce[0] = 2
@@ -271,6 +280,7 @@ function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey) {
 	
 	sc = saltChannelSession(mockSocket, threshold)
 	sc.setOnHandshakeComplete(handshakeCompleteCb)
+	sc.setOnerror(errorCb)
 	
 	sc.handshake(clientSigKeyPair, clientEphKeyPair, sigKey)	
 }
@@ -330,7 +340,7 @@ function receiveAppPacket() {
 	let appPacket = getAppPacket()
 	let encrypted = encrypt(appPacket)
 	
-	mockSocket.onmessage({data: encrypted})
+	sendOnMockSocket(encrypted)
 }
 
 function getAppPacket() {
@@ -373,7 +383,7 @@ function receiveMultiAppPacket() {
 	let multiAppPacket = getMultiAppPacket()
 	let encrypted = encrypt(multiAppPacket)
 	
-	mockSocket.onmessage({data: encrypted})
+	sendOnMockSocket(encrypted)
 }
 
 function getMultiAppPacket() {
@@ -425,8 +435,7 @@ function receiveBadEncryption() {
 	encrypted[6] = 0
 	encrypted[7] = 0
 	
-	let evt = {data: encrypted}
-	mockSocket.onmessage(evt);
+	sendOnMockSocket(encrypted)
 }
 
 function badEncryptionError(err) {
@@ -469,8 +478,7 @@ function receiveDelayedPacket() {
 	appPacket[5] = 0
 	
 	let encrypted = encrypt(appPacket)
-	let evt = {data: encrypted}
-	mockSocket.onmessage(evt)
+	sendOnMockSocket(encrypted)
 }
 
 function delayedPacketError(err) {
@@ -489,7 +497,7 @@ function receiveLastFlag() {
 	let appPacket = getAppPacket()
 	let encrypted = encrypt(appPacket, true)
 	
-	mockSocket.onmessage({data: encrypted})
+	sendOnMockSocket(encrypted)
 }
 
 function sendLastFlag() {
@@ -500,10 +508,22 @@ function sendLastFlag() {
 	sc.send(true, new Uint8Array(1));
 }
 
+function noSuchServerError(err) {
+	let success
+	let msg = err.message
+	if (msg === 'SaltChannel error: M2: NoSuchServer exception') {
+		success = true
+	} else {
+		success = false
+	}
+	
+	outcome(success, '  ' + msg)
+}
+
 function outcome(success, msg) {
 	if (success) {
 		passCount++
-		console.log(currentTest + ' PASSED')
+		//console.log(currentTest + ' PASSED')
 	} else {
 		console.log(currentTest + ' FAILED! \n' + msg)
 	}
@@ -621,6 +641,62 @@ function validateM1WithServSigKey(message) {
 	sendM2()
 }
 
+function validateM1BadServSigKey(message) {
+	let bytes = new Uint8Array(message)
+	
+	if (bytes.length !== 74) {
+		outcome(false, '  Bad packet length, expected 42, was ' + bytes.length)
+		return
+	}
+	
+	let protocol = String.fromCharCode(bytes[0])
+	protocol += String.fromCharCode(bytes[1])
+	protocol += String.fromCharCode(bytes[2])
+	protocol += String.fromCharCode(bytes[3])
+	
+	if (protocol !== 'SCv2') {
+		outcome(false, '  Bad protocol indicator: ' + protocol)
+		return
+	}
+	
+	if (bytes[4] !== 1) {
+		outcome(false, '  Invalid packet type, expected 1, was ' + bytes[4])
+		return
+	}
+	
+	if(bytes[5] !== 128) {
+		outcome(false, '  Unexpected server sig key included, expected 128, was ' + bytes[5])
+		return
+	}
+		
+	if (!(bytes[6] === 1 && bytes[7] === 0 &&
+		bytes[8] === 0 && bytes[9] === 0)) {
+		outcome(false, '  M1: Expected time to be set')
+		return 
+	} 
+	
+	cEpoch = util.currentTimeMs()
+	
+	let publicEphemeral = new Uint8Array(bytes.buffer, 10, 32)
+	
+	if (!util.uint8ArrayEquals(publicEphemeral, clientEphKeyPair.publicKey)) {
+		outcome(false, '  Unexpected public ephemeral key from client')
+		return
+	}
+	
+	let serverSigKey = new Uint8Array(bytes.buffer, 42, 32)
+	if (!util.uint8ArrayEquals(serverSigKey, new Uint8Array(32))) {
+		outcome(false, '  Unexpected server sig key from client')
+		return
+	}
+	
+	sessionKey = nacl.box.before(publicEphemeral, serverEphKeyPair.secretKey)
+	
+	m1Hash = nacl.hash(bytes)
+
+	sendM2NoSuchServer()
+}
+
 function sendM2() {
 	let m2 = new Uint8Array(38)
 	
@@ -637,10 +713,24 @@ function sendM2() {
 	
 	sEpoch = util.currentTimeMs()
 	
-	let evt = {data: m2}
-	mockSocket.onmessage(evt)
+	sendOnMockSocket(m2)
 	
 	sendM3()
+}
+
+function sendM2NoSuchServer() {
+	let m2 = new Uint8Array(38)
+	
+	m2[0] = 2
+	m2[1] = 129 // NoSuchServer & LastFlag
+	// Time is supported
+	m2[2] = 1
+	
+	sendOnMockSocket(m2)
+}
+
+function sendOnMockSocket(data) {
+	mockSocket.onmessage({data: data})
 }
 
 function sendM3() {
@@ -668,11 +758,10 @@ function sendM3() {
 	m3[4] = time[2]
 	m3[5] = time[3]
 	
-	let encrypted = encrypt(m3)
-	let evt = {data: encrypted}
 	mockSocket.send = validateM4
 	
-	mockSocket.onmessage(evt)
+	let encrypted = encrypt(m3)
+	sendOnMockSocket(encrypted)
 }
 
 function validateM4(message) {
