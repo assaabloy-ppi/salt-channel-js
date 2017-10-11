@@ -57,6 +57,14 @@ exports.run = () => {
 	currentTest = 'noSuchServer'
 	runTest(sendNoSuchServer, noSuchServerError, 1, new Uint8Array(32))
 	
+	mockSocket.send = validateA1Any
+	currentTest = 'badCharInP1'
+	runTest(sendBadCharInP1, badCharInP1)
+	
+	currentTest = 'badCharInP2'
+	runTest(sendBadCharInP2, badCharInP2)
+	
+	
 	if (passCount === testCount) {
 		console.log('======= ALL ' + testCount + ' A1A2 TESTS PASSED! =======\n')
 	} else {
@@ -160,7 +168,7 @@ function send127Prots() {
 
 
 function sendBadPacketLength() {
-	badLength = 25
+	badLength = 43
 	let a2 = new Uint8Array(badLength)
 	
 	expectedProtCount = 1
@@ -240,6 +248,50 @@ function sendNoSuchServer() {
 
 function sendOnBadState() {
 	sc.a1a2()
+}
+
+function sendBadCharInP1() {
+	let a2 = new Uint8Array(23)
+	
+	expectedProtCount = 1
+	
+	a2[0] = byteZero // Packet type
+	a2[1] = byteOne // LastFlag
+	a2[2] = expectedProtCount // Count
+	
+	let p1 = 'SC2 ------'
+	let p2 = '----------'
+	
+	for (let i = 0; i < 10; i++) {
+		a2[3+i] = p1.charCodeAt(i)
+		a2[13+i] = p2.charCodeAt(i)
+	}
+	
+	let evt = {}
+	evt.data = a2
+	mockSocket.onmessage(evt)
+}
+
+function sendBadCharInP2() {
+	let a2 = new Uint8Array(23)
+	
+	expectedProtCount = 1
+	
+	a2[0] = byteZero // Packet type
+	a2[1] = byteOne // LastFlag
+	a2[2] = expectedProtCount // Count
+	
+	let p1 = 'SC2-------'
+	let p2 = '--- ------'
+	
+	for (let i = 0; i < 10; i++) {
+		a2[3+i] = p1.charCodeAt(i)
+		a2[13+i] = p2.charCodeAt(i)
+	}
+	
+	let evt = {}
+	evt.data = a2
+	mockSocket.onmessage(evt)
 }
 
 /*
@@ -452,6 +504,29 @@ function badPacketHeaderError2(err) {
 	outcome(success, '  ' + msg)
 }
 
+function badCharInP1(err) {
+	let success
+	let msg = err.message
+	if (msg === 'SaltChannel error: A2: Invalid char in p1 " "') {
+		success = true
+	} else {
+		success = false
+	}
+	
+	outcome(success, '  ' + msg)
+}
+
+function badCharInP2(err) {
+	let success
+	let msg = err.message
+	if (msg === 'SaltChannel error: A2: Invalid char in p2 " "') {
+		success = true
+	} else {
+		success = false
+	}
+	
+	outcome(success, '  ' + msg)
+}
 
 function noSuchServerError(err) {
 	let success
