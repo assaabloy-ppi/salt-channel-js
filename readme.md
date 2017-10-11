@@ -174,4 +174,4 @@ The implementation is tested using node.js. To run all tests:
 
 	node js/src-test/run.js
 
-The README file documents the test coverage. The folder js/src-test/tests contains the test scripts. All tests uses a mocked WebSocket to send and receive messages.
+The readme.md file in js/src-test documents the test coverage. The folder js/src-test/tests contains the test scripts. All tests uses a mocked WebSocket to send and receive messages.
