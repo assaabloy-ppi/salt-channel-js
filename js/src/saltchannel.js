@@ -182,13 +182,13 @@ module.exports = (ws, thresh = 5000) => {
         	
         	for (let j = 0; j < 10; j++) {
         		if (a2[offset] < low || a2[offset] > high) {
-        			error('A2: Invalid char in p1 ' +
-        				String.fromCharCode(a2[offset]))
+        			error('A2: Invalid char in p1 "' +
+        				String.fromCharCode(a2[offset]) + '"')
         			return
         		}
         		if (a2[offset + 10] < low || a2[offset + 10] > high) {
-        			error('A2: Invalid char in p2 ' +
-        				String.fromCharCode(a2[offset + 10]))
+        			error('A2: Invalid char in p2 "' +
+        				String.fromCharCode(a2[offset + 10]) + '"')
         			return
         		}
         		p1 += String.fromCharCode(a2[offset])
