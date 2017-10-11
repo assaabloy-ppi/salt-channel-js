@@ -60,57 +60,45 @@ let currentTest
 let m4Delayed
 let passCount = 0
 let testCount = 0
-let multiAppPacketCount = 0
-let multiAppPacketFailed = false
+let multiAppPacketCount
+let mutliAppPacketFailed
 let lastFlag
 
 
 exports.run = () => {
 	console.log('======= HANDSHAKE TESTS STARTING! =======')
-	currentTest = 'testNoServSigKey'
-	runTest(onHandshakeComplete, validateM1NoServSigKey)
 	
-	currentTest = 'testWithServSigKey'
-	runTest(onHandshakeComplete, validateM1WithServSigKey, serverSigKeyPair.publicKey)
+	testMinimal()
+	
+	testWithServSigKey()
 
-	currentTest = 'testWithAppPacket'
-	runTest(echoAppMessage, validateM1NoServSigKey)
+	testSendAppPacket1()
 	
-	currentTest = 'testWithMultiAppPacket'
-	runTest(echoMultiAppMessage, validateM1NoServSigKey)
+	testSendAppPacket2()
 	
-	currentTest = 'testWithBadEncryption'
-	runTest(receiveBadEncryption, validateM1NoServSigKey)
+	testReceiveAppPacket()
 	
-	currentTest = 'testReceiveAfterBadEncryption'
-	testCount++
-	receiveAfterBadEncryption()
+	testSendMultiAppPacket1()
 	
-	currentTest = 'testWithDelayed'
-	threshold = 20
-	runTest(receiveDelayed, validateM1NoServSigKey)
+	testSendMultiAppPacket2()
 	
-	currentTest = 'testReceiveAfterDelayed'
-	testCount++
-	receiveAfterDelayed()
+	testReceiveMultiAppPacket()
 	
-	currentTest = 'testreuseOldSaltChannel'
-	reuseOldSaltChannel(onHandshakeComplete, validateM1NoServSigKey)
+	testReceiveBadEncryption()
 	
-	currentTest = 'testLastFlag'
-	testCount++
-	receiveLastFlag()
+	testReceiveAfterError()
 	
-	currentTest = 'testStateAfterLastFlag'
-	testCount++
-	stateAfterLastFlag()
+	testReceiveDelayed()
+		
+	testHandshakeAfterError()
 	
-	currentTest = 'testSendLastFlag'
-	runTest(sendLastFlag, validateM1NoServSigKey)
+	testReceiveLastFlag()
 	
-	currentTest = 'testStateAfterSentLastFlag'
-	testCount++
-	stateAfterLastFlag()
+	testStateAfterReceivedLastFlag()
+	
+	testSendLastFlag()
+
+	testStateAfterSentLastFlag()
 		
 	if (passCount === testCount) {
 		console.log('======= ALL ' + testCount + ' HANDSHAKE TESTS PASSED! =======\n')
@@ -120,9 +108,158 @@ exports.run = () => {
 	}
 }
 
-function runTest(handshakeCompleteCb, validateM1, sigKey) {
+function testMinimal() {
+	currentTest = 'minimal'
 	testCount++
 	
+	newSaltChannelAndHandshake(verifyReady, validateM1NoServSigKey)
+}
+
+function testWithServSigKey() {
+	currentTest = 'withServSigKey'
+	testCount++
+	
+	newSaltChannelAndHandshake(verifyReady, validateM1WithServSigKey, serverSigKeyPair.publicKey)
+}
+
+function testSendAppPacket1() {
+	currentTest = 'sendAppPacket1'
+	testCount++
+	
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	
+	mockSocket.send = validateAppPacket
+	
+	sendAppPacket1()
+}
+
+function testSendAppPacket2() {
+	currentTest = 'sendAppPacket2'
+	testCount++
+	
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	mockSocket.send = validateAppPacket
+	
+	sendAppPacket2()
+}
+
+function testReceiveAppPacket() {
+	currentTest = 'receiveAppPacket'
+	testCount++
+	
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	
+	sc.setOnmessage(receiveZeroByte)
+	receiveAppPacket()
+}
+
+function testSendMultiAppPacket1() {
+	currentTest = 'sendMultiAppPacket1'
+	testCount++
+	
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	
+	mockSocket.send = validateMultiAppPacket
+	
+	sendMultiAppPacket1()
+}
+
+function testSendMultiAppPacket2() {
+	currentTest = 'sendMultiAppPacket2'
+	testCount++
+	
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	
+	mockSocket.send = validateMultiAppPacket
+	
+	sendMultiAppPacket2()
+}
+
+function testReceiveMultiAppPacket() {
+	currentTest = 'receiveMultiAppPacket'
+	testCount++
+	multiAppPacketCount = 0;
+	multiAppPacketFailed = false;
+	
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	
+	sc.setOnmessage(receiveTwoAppPacketData)
+	receiveMultiAppPacket()
+}
+
+function testReceiveBadEncryption() {
+	currentTest = 'receiveBadEncryption'
+	testCount++
+	
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	
+	sc.setOnerror(badEncryptionError)
+	receiveBadEncryption()
+}
+
+function testReceiveAfterError() {
+	currentTest = 'receiveAfterError'
+	testCount++
+	
+	sc.setOnerror(notReadyError)
+	
+	receiveAppPacket()
+}
+
+function testReceiveDelayed() {
+	currentTest = 'receiveDelayed'
+	testCount++
+	
+	threshold = 20
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	
+	receiveDelayedPacket()
+	threshold = undefined
+}
+
+function testHandshakeAfterError() {
+	currentTest = 'handShakeAfterError'
+	testCount++
+	
+	handshakeAfterError()
+}
+
+function testReceiveLastFlag() {
+	currentTest = 'receiveLastFlag'
+	testCount++
+	
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	sc.setOnmessage(receiveZeroByte)
+	
+	receiveLastFlag()
+}
+
+function testStateAfterReceivedLastFlag() {
+	currentTest = 'stateAfterReceivedLastFlag'
+	testCount++
+	
+	verifyInit()
+}
+
+function testSendLastFlag() {
+	currentTest = 'sendLastFlag'
+	testCount++
+	
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	
+	mockSocket.send = validateAppPacketWithLastFlag
+	
+	sendLastFlag()
+}
+
+function testStateAfterSentLastFlag() {
+	currentTest = 'stateAfterSentLastFlag'
+	testCount++
+	
+	verifyInit()
+}
+
+function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey) {	
 	eNonce = new Uint8Array(nacl.secretbox.nonceLength)
 	dNonce = new Uint8Array(nacl.secretbox.nonceLength)
 	eNonce[0] = 2
@@ -138,20 +275,245 @@ function runTest(handshakeCompleteCb, validateM1, sigKey) {
 	sc.handshake(clientSigKeyPair, clientEphKeyPair, sigKey)	
 }
 
-function reuseOldSaltChannel(handshakeCompleteCb, validateM1) {
-	testCount++
+function handshakeAfterError() {
 	eNonce = new Uint8Array(nacl.secretbox.nonceLength)
 	dNonce = new Uint8Array(nacl.secretbox.nonceLength)
 	eNonce[0] = 2
 	dNonce[0] = 1
 	m4Delayed = false
+	lastFlag = false
 	
-	mockSocket.send = validateM1
+	mockSocket.send = validateM1NoServSigKey
 	
-	sc.setOnHandshakeComplete(handshakeCompleteCb)
-		
+	sc.setOnHandshakeComplete(verifyReady)
+	
 	sc.handshake(clientSigKeyPair, clientEphKeyPair)
 }
+
+function verifyReady() {	
+	if (sc.getState() === 'ready') {
+		outcome(true)
+	} else {
+		outcome(false, 'Status: ' + sc.getStatus)
+	}
+}
+
+function verifyInit() {
+	if (sc.getState() === 'init') {
+		outcome(true)
+	} else {
+		outcome(false, 'Status: ' + sc.getStatus)
+	}
+}
+
+function doNothing() {
+	// Do nothing
+}
+
+function sendAppPacket1() {
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus)
+		return;
+	} 
+	sc.send(false, new Uint8Array([0]))
+}
+
+function sendAppPacket2() {
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus)
+		return;
+	} 
+	sc.send(false, [new Uint8Array([0])])
+}
+
+function receiveAppPacket() {
+	let appPacket = getAppPacket()
+	let encrypted = encrypt(appPacket)
+	
+	mockSocket.onmessage({data: encrypted})
+}
+
+function getAppPacket() {
+	let appPacket = new Uint8Array(7)
+	appPacket[0] = 5
+	
+	let time = new Int32Array([util.currentTimeMs() - sEpoch])
+	time = new Uint8Array(time.buffer)
+	
+	appPacket.set(time, 2)
+	
+	return appPacket
+}
+
+function receiveZeroByte(message) {
+	if (util.uint8ArrayEquals(message, new Uint8Array(1))) {
+		outcome(true);
+	} else {
+		outcome(false, '  Expected 1 zero byte, was ' + util.buf2hex(message));
+	}
+}
+
+function sendMultiAppPacket1() {
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus)
+		return;
+	} 
+	sc.send(false, [new Uint8Array([0]), new Uint8Array([1])])
+}
+
+function sendMultiAppPacket2() {
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus)
+		return;
+	} 
+	sc.send(false, new Uint8Array([0]), new Uint8Array([1]))
+}
+
+function receiveMultiAppPacket() {
+	let multiAppPacket = getMultiAppPacket()
+	let encrypted = encrypt(multiAppPacket)
+	
+	mockSocket.onmessage({data: encrypted})
+}
+
+function getMultiAppPacket() {
+	let multiAppPacket = new Uint8Array(14)
+	multiAppPacket[0] = 11	// Type
+	
+	multiAppPacket[6] = 2	// Count
+	
+	multiAppPacket[8] = 1 	// Length
+	
+	multiAppPacket[11] = 1	// Length
+	multiAppPacket[13] = 1	// Data
+	
+	let time = new Int32Array([util.currentTimeMs() - sEpoch])
+	time = new Uint8Array(time.buffer)
+	multiAppPacket.set(time, 2)
+	
+	return multiAppPacket
+}
+
+function receiveTwoAppPacketData(message) {
+	if (util.uint8ArrayEquals(message, new Uint8Array([multiAppPacketCount++]))) {
+		if (multiAppPacketCount === 2 && !multiAppPacketFailed) {
+			outcome(true);
+		}
+	} else {
+		outcome(false, '  Expected 1 zero byte, was ' + util.buf2hex(message));
+		multiAppPacketFailed = true
+	}
+}
+
+function receiveBadEncryption() {
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus())
+		return;
+	} 
+		
+	let appPacket = new Uint8Array(7)
+	appPacket[0] = 5
+	
+	let time = new Int32Array([util.currentTimeMs() - sEpoch])
+	time = new Uint8Array(time.buffer)
+	
+	appPacket.set(time, 2)
+		
+	let encrypted = encrypt(appPacket)
+	
+	encrypted[5] = 0
+	encrypted[6] = 0
+	encrypted[7] = 0
+	
+	let evt = {data: encrypted}
+	mockSocket.onmessage(evt);
+}
+
+function badEncryptionError(err) {
+	let success
+	let msg = err.message
+	if (msg === 'SaltChannel error: Could not decrypt message') {
+		success = true
+	} else {
+		success = false
+	}
+	
+	outcome(success, '  ' + msg)
+}
+
+function notReadyError(err) {
+	let success
+	let msg = err.message
+	if (msg === 'SaltChannel error: Received message when salt channel was not ready') {
+		success = true
+	} else {
+		success = false
+	}
+	
+	outcome(success, '  ' + msg)
+}
+
+function receiveDelayedPacket() {
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus)
+		return;
+	} 
+	
+	sc.setOnerror(delayedPacketError)
+	
+	let appPacket = getAppPacket()
+	
+	appPacket[2] = 2	// Time
+	appPacket[3] = 0
+	appPacket[4] = 0
+	appPacket[5] = 0
+	
+	let encrypted = encrypt(appPacket)
+	let evt = {data: encrypted}
+	mockSocket.onmessage(evt)
+}
+
+function delayedPacketError(err) {
+	let success
+	let msg = err.message
+	if (msg === 'SaltChannel error: (Multi)AppPacket: Detected a delayed packet') {
+		success = true
+	} else {
+		success = false
+	}
+	
+	outcome(success, '  ' + msg)
+}
+
+function receiveLastFlag() {
+	let appPacket = getAppPacket()
+	let encrypted = encrypt(appPacket, true)
+	
+	mockSocket.onmessage({data: encrypted})
+}
+
+function sendLastFlag() {
+	if (sc.getState() !== 'ready') {
+		outcome(false, 'Status: ' + sc.getStatus())
+		return
+	}
+	sc.send(true, new Uint8Array(1));
+}
+
+function outcome(success, msg) {
+	if (success) {
+		passCount++
+		console.log(currentTest + ' PASSED')
+	} else {
+		console.log(currentTest + ' FAILED! \n' + msg)
+	}
+}
+
+// ==================================================================
+// ==================================================================
+// ==================================================================
+// =================== SERVER SIDE HANDSHAKE CODE ===================
+// ============================ (sorta) =============================
 
 function validateM1NoServSigKey(message) {
 	let m1 = new Uint8Array(message)
@@ -375,187 +737,13 @@ function validateM4(message) {
 		outcome(false, '  Could not verify signature')
 		return
 	}
-	
-	
-	switch (currentTest) {
-		case 'testWithAppPacket':
-		case 'testSendOneInArray':
-			mockSocket.send = validateAppPacket
-			break
-		case 'testWithMultiAppPacket':
-		case 'testSendAsTwoArgs':
-			mockSocket.send = validateMultiAppPacket
-			break
-	}	
 }
 
-function validateAppPacket(message) {
-	let encryptedMessage = new Uint8Array(message)
-	let appPacket = decrypt(encryptedMessage)
-	
-	if (appPacket.length !== 7) {
-		outcome(false, '  Expected AppPacket.length 7, was ' + appPacket.length)
-		return
-	}
-	if (appPacket[0] !== 5) {
-		outcome(false, ' Expected AppPacket type, was ' + appPacket[0])
-		return
-	}
-	if (appPacket[1] !== 0) {
-		outcome(false, '  Expected zero byte, was ' + appPacket[1])
-		return
-	}
-	
-	let time = new Uint8Array(4)
-	time[0] = appPacket[2]
-	time[1] = appPacket[3]
-	time[2] = appPacket[4]
-	time[3] = appPacket[5]
-	
-	time = (new Int32Array(time.buffer))[0]
-	
-	if (util.currentTimeMs() - cEpoch > time + threshold ) {
-		outcome(false, '  AppPacket delayed')
-		return
-	}
-	
-	if (appPacket[6] !== 0) {
-		outcome(false, '  Unexpected data, expected 0, was ' + appPacket[6])
-		return
-	}
-	
-	outcome(true)
-	
-	let encrypted;
-	switch (currentTest) {
-		case 'testWithAppPacket':
-			currentTest = 'receiveAppPacket'
-			testCount++
-			sc.setOnmessage(onAppPacket)
-			
-			encrypted = encrypt(appPacket)
-			let evt = {data: encrypted}
-			mockSocket.onmessage(evt)
-			break	
-	}
-	
-}
-
-function validateMultiAppPacket(message) {
-	let encryptedMessage = new Uint8Array(message)
-	let multiAppPacket = decrypt(encryptedMessage)
-
-	if (multiAppPacket.length !== 14) {
-		outcome(false, '  Expected MultiAppPacket.length 14, was ' + multiAppPacket.length)
-		return
-	}
-	if (multiAppPacket[0] !== 11) {
-		outcome(false, ' Expected MultiAppPacket type, was ' + multiAppPacket[0])
-		return
-	}
-	if (multiAppPacket[1] !== 0) {
-		outcome(false, '  Expected zero byte, was ' + multiAppPacket[1])
-		return
-	}
-	
-	let time = new Uint8Array(4)
-	time[0] = multiAppPacket[2]
-	time[1] = multiAppPacket[3]
-	time[2] = multiAppPacket[4]
-	time[3] = multiAppPacket[5]
-	
-	time = (new Int32Array(time.buffer))[0]
-	
-	if (util.currentTimeMs() - cEpoch > time + threshold ) {
-		outcome(false, '  MultiAppPacket delayed')
-		return
-	}
-	
-	if (multiAppPacket[6] !== 2 || multiAppPacket[7] !== 0) {
-		outcome(false, '  Unexpected count, expected 2 0, was ' + 
-				appPacket[6] + ' ' + appPacket[7])
-		return
-	}
-	
-	if (multiAppPacket[8] !== 1 || multiAppPacket[9] !== 0) {
-		outcome(false, '  Unexpected length, expected 1 0, was ' + 
-			appPacket[8] + ' ' + appPacket[9])
-		return
-	}
-	
-	if (multiAppPacket[10] !== 0) {
-		outcome(false, '  Unexpected data, expected 0, was ' + appPacket[9])
-		return
-	}
-	
-	if (multiAppPacket[11] !== 1 || multiAppPacket[12] !== 0) {
-		outcome(false, '  Unexpected length, expected 1 0, was ' + 
-			appPacket[11] + ' ' + appPacket[12])
-		return
-	}
-	
-	if (multiAppPacket[13] !== 1) {
-		outcome(false, '  Unexpected data, expected 1, was ' + appPacket[9])
-		return
-	}
-	
-	outcome(true)
-	
-	switch (currentTest) {
-		case 'testWithMultiAppPacket':
-			currentTest = 'receiveMultiAppPacket'
-			testCount++
-			sc.setOnmessage(onMultiAppPacket)
-			
-			let encrypted = encrypt(multiAppPacket)
-			let evt = {data: encrypted}
-			mockSocket.onmessage(evt)
-			break
-			
-	}
-}
-
-function validateAppPacketLastFlag(message) {
-	let encryptedMessage = new Uint8Array(message)
-	let appPacket = decrypt(encryptedMessage)
-	
-	if (appPacket.length !== 7) {
-		outcome(false, '  Expected AppPacket.length 7, was ' + appPacket.length)
-		return
-	}
-	if (appPacket[0] !== 5) {
-		outcome(false, ' Expected AppPacket type, was ' + appPacket[0])
-		return
-	}
-	if (appPacket[1] !== 0) {
-		outcome(false, '  Expected zero byte, was ' + appPacket[1])
-		return
-	}
-	
-	let time = new Uint8Array(4)
-	time[0] = appPacket[2]
-	time[1] = appPacket[3]
-	time[2] = appPacket[4]
-	time[3] = appPacket[5]
-	
-	time = (new Int32Array(time.buffer))[0]
-	
-	if (util.currentTimeMs() - cEpoch > time + threshold ) {
-		outcome(false, '  AppPacket delayed')
-		return
-	}
-	
-	if (appPacket[6] !== 0) {
-		outcome(false, '  Unexpected data, expected 0, was ' + appPacket[6])
-		return
-	}
-	
-	if (lastFlag) {
-		outcome(true)
-	} else {
-		outcome(false, '  Expected lastFlag to have been set')
-	}
-}
+// ==================================================================
+// ==================================================================
+// ==================================================================
+// ========================== CRYPTO STUFF ==========================
+// ==================================================================
 
 function decrypt(message) {
 	if (message[0] === 6 && message[1] === 0) {
@@ -643,200 +831,150 @@ function increaseNonce2(nonce) {
 	return nonce
 }
 
-function echoAppMessage() {
-	if (sc.getState() !== 'ready') {
-		outcome(false, 'Status: ' + sc.getStatus)
-		return;
-	} 
-	sc.send(false, new Uint8Array([0]))
-	currentTest = 'testSendOneInArray'
-	testCount++
-	sc.send(false, [new Uint8Array([0])])
-}
+// ==================================================================
+// ==================================================================
+// ==================================================================
 
-function echoMultiAppMessage() {
-	if (sc.getState() !== 'ready') {
-		outcome(false, 'Status: ' + sc.getStatus)
-		return;
-	} 
-	sc.send(false, [new Uint8Array([0]), new Uint8Array([1])])
-	currentTest = 'testSendAsTwoArgs'
-	testCount++
-	sc.send(false, new Uint8Array([0]), new Uint8Array([1]))
-}
-
-function receiveBadEncryption() {
-	if (sc.getState() !== 'ready') {
-		outcome(false, 'Status: ' + sc.getStatus())
-		return;
-	} 
+function validateAppPacket(message) {
+	let encryptedMessage = new Uint8Array(message)
+	let appPacket = decrypt(encryptedMessage)
 	
-	sc.setOnerror(badEncryptionError)
-	
-	let appPacket = new Uint8Array(7)
-	appPacket[0] = 5
-	
-	let time = new Int32Array([util.currentTimeMs() - sEpoch])
-	time = new Uint8Array(time.buffer)
-	
-	appPacket.set(time, 2)
-		
-	let encrypted = encrypt(appPacket)
-	
-	encrypted[5] = 0
-	encrypted[6] = 0
-	encrypted[7] = 0
-	
-	let evt = {data: encrypted}
-	mockSocket.onmessage(evt);
-}
-
-function sendLastFlag() {
-	if (sc.getState() !== 'ready') {
-		outcome(false, 'Status: ' + sc.getStatus())
+	if (appPacket.length !== 7) {
+		outcome(false, '  Expected AppPacket.length 7, was ' + appPacket.length)
 		return
 	}
-	mockSocket.send = validateAppPacketLastFlag
-	sc.send(true, new Uint8Array(1));
-}
-
-function receiveDelayed() {
-	if (sc.getState() !== 'ready') {
-		outcome(false, 'Status: ' + sc.getStatus)
-		return;
-	} 
-	
-	sc.setOnerror(delayedPacketError)
-	
-	let appPacket = new Uint8Array(7)
-	appPacket[0] = 5
-	
-	appPacket[2] = 2
-	
-	let encrypted = encrypt(appPacket)
-	let evt = {data: encrypted}
-	mockSocket.onmessage(evt)
-	
-}
-
-function receiveAfterBadEncryption() {
-	sc.setOnerror(notReadyError)
-	
-	let appPacket = new Uint8Array(7)
-	appPacket[0] = 5
-	
-	let time = new Int32Array([util.currentTimeMs() - sEpoch])
-	time = new Uint8Array(time.buffer)
-	
-	appPacket.set(time, 2)
-		
-	let encrypted = encrypt(appPacket)
-	
-	let evt = {data: encrypted}
-	mockSocket.onmessage(evt);
-}
-
-function receiveAfterDelayed() {
-	receiveAfterBadEncryption()
-}
-
-function receiveLastFlag() {
-	sc.setOnmessage(onAppPacket)
-	let appPacket = new Uint8Array(7)
-	appPacket[0] = 5
-	
-	let time = new Int32Array([util.currentTimeMs() - sEpoch])
-	time = new Uint8Array(time.buffer)
-	
-	appPacket.set(time, 2)
-		
-	let encrypted = encrypt(appPacket, true)
-	
-	let evt = {data: encrypted}
-	mockSocket.onmessage(evt);
-}
-
-function stateAfterLastFlag() {
-	if (sc.getState() !== 'init') {
-		outcome(false, '  Unexpected state after last flag ' + sc.getState())
-		return 
+	if (appPacket[0] !== 5) {
+		outcome(false, ' Expected AppPacket type, was ' + appPacket[0])
+		return
 	}
+	if (appPacket[1] !== 0) {
+		outcome(false, '  Expected zero byte, was ' + appPacket[1])
+		return
+	}
+	
+	let time = new Uint8Array(4)
+	time[0] = appPacket[2]
+	time[1] = appPacket[3]
+	time[2] = appPacket[4]
+	time[3] = appPacket[5]
+	
+	time = (new Int32Array(time.buffer))[0]
+	
+	if (util.currentTimeMs() - cEpoch > time + threshold ) {
+		outcome(false, '  AppPacket delayed')
+		return
+	}
+	
+	if (appPacket[6] !== 0) {
+		outcome(false, '  Unexpected data, expected 0, was ' + appPacket[6])
+		return
+	}
+	
 	outcome(true)
 }
 
+function validateMultiAppPacket(message) {
+	let encryptedMessage = new Uint8Array(message)
+	let multiAppPacket = decrypt(encryptedMessage)
 
-
-function onAppPacket(message) {
-	if (util.uint8ArrayEquals(message, new Uint8Array(1))) {
-		outcome(true);
-	} else {
-		outcome(false, '  Expected 1 zero byte, was ' + util.buf2hex(message));
+	if (multiAppPacket.length !== 14) {
+		outcome(false, '  Expected MultiAppPacket.length 14, was ' + multiAppPacket.length)
+		return
 	}
-}
-
-function onMultiAppPacket(message) {
-	if (!util.uint8ArrayEquals(message, new Uint8Array([multiAppPacketCount++]))) {
-		outcome(false, '  Expected 1 zero byte, was ' + util.buf2hex(message));
-		multiAppPacketFailed = true
-	} else {
-		if (multiAppPacketCount === 2 && !multiAppPacketFailed) {
-			outcome(true);
-		}
+	if (multiAppPacket[0] !== 11) {
+		outcome(false, ' Expected MultiAppPacket type, was ' + multiAppPacket[0])
+		return
 	}
-}
-
-function badEncryptionError(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: Could not decrypt message') {
-		success = true
-	} else {
-		success = false
+	if (multiAppPacket[1] !== 0) {
+		outcome(false, '  Expected zero byte, was ' + multiAppPacket[1])
+		return
 	}
 	
-	outcome(success, '  ' + msg)
-}
-
-function delayedPacketError(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: (Multi)AppPacket: Detected a delayed packet') {
-		success = true
-	} else {
-		success = false
+	let time = new Uint8Array(4)
+	time[0] = multiAppPacket[2]
+	time[1] = multiAppPacket[3]
+	time[2] = multiAppPacket[4]
+	time[3] = multiAppPacket[5]
+	
+	time = (new Int32Array(time.buffer))[0]
+	
+	if (util.currentTimeMs() - cEpoch > time + threshold ) {
+		outcome(false, '  MultiAppPacket delayed')
+		return
 	}
 	
-	outcome(success, '  ' + msg)
-}
-
-function notReadyError(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: Received message when salt channel was not ready') {
-		success = true
-	} else {
-		success = false
+	if (multiAppPacket[6] !== 2 || multiAppPacket[7] !== 0) {
+		outcome(false, '  Unexpected count, expected 2 0, was ' + 
+				multiAppPacket[6] + ' ' + multiAppPacket[7])
+		return
 	}
 	
-	outcome(success, '  ' + msg)
+	if (multiAppPacket[8] !== 1 || multiAppPacket[9] !== 0) {
+		outcome(false, '  Unexpected length, expected 1 0, was ' + 
+			multiAppPacket[8] + ' ' + multiAppPacket[9])
+		return
+	}
+	
+	if (multiAppPacket[10] !== 0) {
+		outcome(false, '  Unexpected data, expected 0, was ' + multiAppPacket[10])
+		return
+	}
+	
+	if (multiAppPacket[11] !== 1 || multiAppPacket[12] !== 0) {
+		outcome(false, '  Unexpected length, expected 1 0, was ' + 
+			multiAppPacket[11] + ' ' + multiAppPacket[12])
+		return
+	}
+	
+	if (multiAppPacket[13] !== 1) {
+		outcome(false, '  Unexpected data, expected 1, was ' + multiAppPacket[13])
+		return
+	}
+	
+	outcome(true)
 }
 
-function onHandshakeComplete() {	
-	if (sc.getState() === 'ready') {
+function validateAppPacketWithLastFlag(message) {
+	let encryptedMessage = new Uint8Array(message)
+	let appPacket = decrypt(encryptedMessage)
+	
+	if (appPacket.length !== 7) {
+		outcome(false, '  Expected AppPacket.length 7, was ' + appPacket.length)
+		return
+	}
+	if (appPacket[0] !== 5) {
+		outcome(false, ' Expected AppPacket type, was ' + appPacket[0])
+		return
+	}
+	if (appPacket[1] !== 0) {
+		outcome(false, '  Expected zero byte, was ' + appPacket[1])
+		return
+	}
+	
+	let time = new Uint8Array(4)
+	time[0] = appPacket[2]
+	time[1] = appPacket[3]
+	time[2] = appPacket[4]
+	time[3] = appPacket[5]
+	
+	time = (new Int32Array(time.buffer))[0]
+	
+	if (util.currentTimeMs() - cEpoch > time + threshold ) {
+		outcome(false, '  AppPacket delayed')
+		return
+	}
+	
+	if (appPacket[6] !== 0) {
+		outcome(false, '  Unexpected data, expected 0, was ' + appPacket[6])
+		return
+	}
+	
+	if (lastFlag) {
 		outcome(true)
 	} else {
-		outcome(false, 'Status: ' + sc.getStatus)
+		outcome(false, '  Expected lastFlag to have been set')
 	}
 }
 
-/*
- * Prints outcome of current test
- */
-function outcome(success, msg) {
-	if (success) {
-		passCount++
-		//console.log(currentTest + ' PASSED')
-	} else {
-		console.log(currentTest + ' FAILED! \n' + msg)
-	}
-}
+
+
