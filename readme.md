@@ -28,7 +28,9 @@ WORK IN PROGRESS.
 
 ### Log Entries
 
-2017-10-10, Felix, cleanup, implementation compliant with V2 Draft7. Functionality is tested.
+2017-10-12, Felix, Implementation compliant with V2 Draft7. Improved testing.
+
+2017-10-10, Felix, cleanup, implementation closer to V2 Draft7. Functionality is tested.
 
 2017-10-05, Felix, cleanup, Java test server removed, testing using a mocket WebSocket 
 
