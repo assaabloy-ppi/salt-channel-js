@@ -20,6 +20,7 @@ let byteZero = 9
 let byteOne = 1
 let badLength
 let badByte
+let errorMsg
 
 exports.run = () => {
 	console.log('======= A1A2 TESTS STARTING =======')
@@ -38,31 +39,51 @@ exports.run = () => {
 	runTest(send127Prots) 
 	
 	currentTest = 'nonInit'
-	runTest(sendOnBadState, badStateError);
+	errorMsg = 'SaltChannel error: A1A2: Invalid internal state: a1a2'
+	runTest(sendOnBadState)
 	
 	currentTest = 'badPacketLength'
-	runTest(sendBadPacketLength, badPacketLengthError)
+	errorMsg = 'SaltChannel error: A2: Expected packet length 23 was 43'
+	runTest(sendBadPacketLength)
 	
 	currentTest = 'badPacketHeader1'
-	runTest(sendBadPacketHeader1, badPacketHeaderError1)
+	errorMsg = 'SaltChannel error: A2: Bad packet header. Expected 9 1, was 0 1'
+	runTest(sendBadPacketHeader1)
 	
 	currentTest = 'badPacketHeader2'
-	runTest(sendBadPacketHeader2, badPacketHeaderError2)
+	errorMsg = 'SaltChannel error: A2: Bad packet header. Expected 9 1, was 9 0'
+	runTest(sendBadPacketHeader2)
 	
 	mockSocket.send = validateA1Pub
 	currentTest = 'addressPub'
-	runTest(send1Prot, null, 1, serverSigKeyPair.publicKey)
+	runTest(send1Prot, 1, serverSigKeyPair.publicKey)
 	
 	mockSocket.send = validateA1ZeroPub
 	currentTest = 'noSuchServer'
-	runTest(sendNoSuchServer, noSuchServerError, 1, new Uint8Array(32))
+	errorMsg = 'SaltChannel error: A2: NoSuchServer exception'
+	runTest(sendNoSuchServer, 1, new Uint8Array(32))
+
+	mockSocket.send = null
+	currentTest = 'badAdressType'
+	errorMsg = 'SaltChannel error: A1A2: Unsupported adress type: 2'
+	runTest(null, 2, null)
 	
 	mockSocket.send = validateA1Any
 	currentTest = 'badCharInP1'
-	runTest(sendBadCharInP1, badCharInP1)
+	errorMsg = 'SaltChannel error: A2: Invalid char in p1 " "'
+	runTest(sendBadCharInP1)
 	
 	currentTest = 'badCharInP2'
-	runTest(sendBadCharInP2, badCharInP2)
+	errorMsg = 'SaltChannel error: A2: Invalid char in p2 " "'
+	runTest(sendBadCharInP2)
+
+	currentTest = 'badCount1'
+	errorMsg = 'SaltChannel error: A2: Count must be in range [1, 127], was: 0'
+	runTest(sendBadCount1)
+
+	currentTest = 'badCount2'
+	errorMsg = 'SaltChannel error: A2: Count must be in range [1, 127], was: 128'
+	runTest(sendBadCount2)
 	
 	
 	if (passCount === testCount) {
@@ -73,13 +94,13 @@ exports.run = () => {
 	}
 }
 
-function runTest(send, onErrorCallback, adressType, adress) {
+function runTest(send, adressType, adress) {
 	testCount++
 	sendA2 = send
 	
 	sc = saltChannelSession(mockSocket)
 	sc.setOnA2Response(onA2Response)
-	sc.setOnerror(onErrorCallback)
+	sc.setOnerror(onError)
 	sc.a1a2(adressType, adress)
 }
 
@@ -294,6 +315,34 @@ function sendBadCharInP2() {
 	mockSocket.onmessage(evt)
 }
 
+function sendBadCount1() {
+	let a2 = new Uint8Array(3)
+	
+	expectedProtCount = 0
+	
+	a2[0] = byteZero // Packet type
+	a2[1] = byteOne // LastFlag
+	a2[2] = expectedProtCount // Count
+	
+	let evt = {}
+	evt.data = a2
+	mockSocket.onmessage(evt)
+}
+
+function sendBadCount2() {
+	let a2 = new Uint8Array(23)
+	
+	expectedProtCount = 128
+	
+	a2[0] = byteZero // Packet type
+	a2[1] = byteOne // LastFlag
+	a2[2] = expectedProtCount // Count
+	
+	let evt = {}
+	evt.data = a2
+	mockSocket.onmessage(evt)
+}
+
 /*
  * Validates A1 message.
  * Always {0x08, 0x00}
@@ -468,10 +517,11 @@ function onA2Response(prots) {
 	outcome(success, msg)
 }
 
-function badPacketLengthError(err) {
+
+function onError(err) {
 	let success
 	let msg = err.message
-	if (msg === 'SaltChannel error: A2: Expected packet length 23 was ' + badLength) {
+	if (msg === errorMsg) {
 		success = true
 	} else {
 		success = false
@@ -480,76 +530,6 @@ function badPacketLengthError(err) {
 	outcome(success, '  ' + msg)
 }
 
-function badPacketHeaderError1(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: A2: Bad packet header. Expected 9 1, was ' + badByte + ' 1') {
-		success = true
-	} else {
-		success = false
-	}
-
-	outcome(success, msg)
-}
-
-function badPacketHeaderError2(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: A2: Bad packet header. Expected 9 1, was 9 ' + badByte) {
-		success = true
-	} else {
-		success = false
-	}
-	
-	outcome(success, '  ' + msg)
-}
-
-function badCharInP1(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: A2: Invalid char in p1 " "') {
-		success = true
-	} else {
-		success = false
-	}
-	
-	outcome(success, '  ' + msg)
-}
-
-function badCharInP2(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: A2: Invalid char in p2 " "') {
-		success = true
-	} else {
-		success = false
-	}
-	
-	outcome(success, '  ' + msg)
-}
-
-function noSuchServerError(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: A2: Bad packet header. Expected 9 1, was 9 129') {
-		success = true
-	} else {
-		success = false
-	}
-	
-	outcome(success, '  ' + msg)
-}
-
-function badStateError(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: A1A2: Invalid internal state: a1a2') {
-		success = true
-	} else {
-		success = false
-	}
-	outcome(success, '  ' + msg)
-}
 
 function stateAfterA1A2() {
 	testCount++

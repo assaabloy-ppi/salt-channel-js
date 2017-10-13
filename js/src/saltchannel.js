@@ -124,28 +124,41 @@ module.exports = (ws, thresh = 5000) => {
     
     function sendA1(adressType = ADDR_TYPE_ANY, adress) {
     	let a1
-    	if (adressType === ADDR_TYPE_ANY) {
-        	a1 = new Uint8Array(5)
-        	a1[0] = 8
-        } else if (adressType === ADDR_TYPE_PUB) {
-        	a1 = new Uint8Array(5 + adress.length)
-        	a1[0] = 8
-        	a1[2] = ADDR_TYPE_PUB
-        	setUint16(a1, adress.length, 3)
-        	a1.set(adress, 5)
-        } else {
-        	error('A1A2: Invalid adress type ' + adressType)
-        	return
-        }
-        
+    	switch (adressType) {
+    		case ADDR_TYPE_ANY:
+    			a1 = getA1Any()
+    			break
+    		case ADDR_TYPE_PUB:
+    			a1 = getA1Pub(adress)
+    			break
+    		default:
+    			error('A1A2: Unsupported adress type: ' + adressType)
+        		return
+    	}
+
         ws.onmessage = function(evt) {
             handleA2(evt.data)
         }
                 
-        ws.send(a1.buffer)
+        sendOnWs(a1.buffer)
         
     }
     
+    function getA1Any() {
+    	let a1 = new Uint8Array(5)
+    	a1[0] = 8
+    	return a1
+    }
+
+    function getA1Pub(adress) {
+		let a1 = new Uint8Array(5 + adress.length)
+        a1[0] = 8
+        a1[2] = ADDR_TYPE_PUB
+        setUint16(a1, adress.length, 3)
+        a1.set(adress, 5)
+        return a1
+    }
+
     function handleA2(message) {
     	if (saltState !== STATE_A1A2) {
     		error('A2: Invalid internal state: ' + saltState)
@@ -153,7 +166,10 @@ module.exports = (ws, thresh = 5000) => {
     	}
         let a2 = new Uint8Array(message)
                 
-        // Packet type 9
+        if (validHeader(a2, 9, 129)) {
+        	error('A2: NoSuchServer exception')
+        	return
+        }
         if (!validHeader(a2, 9, 1)) {
         	error('A2: Bad packet header. Expected 9 1, was ' + 
         		a2[0] + ' ' + a2[1])
@@ -321,8 +337,8 @@ module.exports = (ws, thresh = 5000) => {
 		}
 		// Header
 		if (!validHeader(m3, 3, 0)) {
-			error('Bad packet header. Expected 3 0, was ' + 
-				m2[offset] + ' ' + m2[offset + 1 ])
+			error('M3: Bad packet header. Expected 3 0, was ' + 
+				m3[0] + ' ' + m3[1])
 			return
 		}
 		
@@ -355,7 +371,7 @@ module.exports = (ws, thresh = 5000) => {
 		let success = nacl.sign.detached.verify(concat, signature, serverPub)
 		
 		if (!success) {
-			error('Could not verify signature')
+			error('M3: Could not verify signature')
     		return
 		}
 		
@@ -424,13 +440,13 @@ module.exports = (ws, thresh = 5000) => {
 		return saltState
 	}
 	
-	function error(err) {
-		err = 'SaltChannel error: ' + err
+	function error(msg) {
+		msg = 'SaltChannel error: ' + msg
 		if (typeof onerror === 'function') {
-			onerror(new Error(err))
+			onerror(new Error(msg))
 		} else {
 			console.error('saltchannel.onerror not set')
-			console.error(new Error(err))
+			console.error(new Error(msg))
 		}
 		
 		// Do a hard reset and put session in init state
@@ -470,18 +486,13 @@ module.exports = (ws, thresh = 5000) => {
 			return
 		}
 		
-		if (typeof onmessage !== 'function') {			
-			error('saltchannel.onmessage not set')
-			return
-		}
-		
 		if (validHeader(clear, 5, 0)) {
 			handleAppPacket(clear)
 		} else if (validHeader(clear, 11, 0)) {
 			handleMultiAppPacket(clear)
 		} else {
 			error('(Multi)AppPacket: Bad packet header. ' +
-			'Expected 5 0 or 11 0, was: ' + clear[0] + ' ' + clear[1])
+			'Expected 5 0 or 11 0, was ' + clear[0] + ' ' + clear[1])
 			return
 		}
 		if (saltState === STATE_LAST) {
@@ -494,6 +505,11 @@ module.exports = (ws, thresh = 5000) => {
 		
 		if (count === 0) {
 			error('MultiAppPacket: Zero application messages')
+			return
+		}
+
+		if (typeof onmessage !== 'function') {			
+			error('saltchannel.onmessage not set')
 			return
 		}
 		
@@ -510,6 +526,10 @@ module.exports = (ws, thresh = 5000) => {
 	}
 	
 	function handleAppPacket(appPacket) {
+		if (typeof onmessage !== 'function') {			
+			error('saltchannel.onmessage not set')
+			return
+		}
 		let data = getUints(appPacket, appPacket.length - 6, 6)
 		onmessage(data)
 	}
@@ -530,8 +550,8 @@ module.exports = (ws, thresh = 5000) => {
 			// Last message
 			saltState = STATE_LAST;
 		} else {
-			error('Bad packet header. Expected ' + 6 + ' ' + 0 + 
-			' was ' + message[0] + ' ' + message[1])
+			error('EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was ' 
+				+ message[0] + ' ' + message[1])
 			return null
 		}
 		
@@ -546,7 +566,7 @@ module.exports = (ws, thresh = 5000) => {
 		dNonce = increaseNonce2(dNonce)
 		
 		if (!clear) {
-			error('Could not decrypt message')
+			error('EncryptedMessage: Could not decrypt message')
 			return null
 		}
 		// clear.length < clear.buffer.byteLength
@@ -594,7 +614,7 @@ module.exports = (ws, thresh = 5000) => {
 	}
 	
 	function setInt32(uints, data, offset) {
-		let int32 = new Int32Array([data])		
+		let int32 = new Int32Array([data])
 		uints.set(int32, offset)
 	}
 	

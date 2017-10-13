@@ -22,7 +22,6 @@ let serverEphKeyPair = {
 	secretKey: util.hex2Uint8Arr('942d5f9bb23b8380ce9a86ae52600ec675b922b64b1b294c8f94c44255a26fe0')
 	}
 
-
 let mockSocket = {}
 let sessionKey
 let eNonce
@@ -57,6 +56,8 @@ let sigBytes2 = new Uint8Array([ SIG_STR_2.charCodeAt(0)
 							,SIG_STR_2.charCodeAt(7)])
 
 let currentTest
+let errorMsg
+let badData
 let m4Delayed
 let passCount = 0
 let testCount = 0
@@ -101,6 +102,32 @@ exports.run = () => {
 	testStateAfterSentLastFlag()
 	
 	testWithBadServSigKey()
+
+	testReceiveBadHeaderEnc1()
+
+	testReceiveBadHeaderEnc2()
+
+	testReceiveBadHeaderApp1()
+
+	testReceiveBadHeaderApp2()
+
+	testReceiveBadHeaderApp3()
+
+	testReceiveBadHeaderM21()
+
+	testReceiveBadHeaderM22()
+
+	testReceiveBadTimeM2()
+
+	testReceiveBadHeaderM31()
+
+	testReceiveBadHeaderM32()
+
+	testReceiveBadHeaderM33()
+
+	testReceiveBadHeaderM34()
+
+	testReceiveBadPubEph()
 		
 	if (passCount === testCount) {
 		console.log('======= ALL ' + testCount + ' HANDSHAKE TESTS PASSED! =======\n')
@@ -192,18 +219,17 @@ function testReceiveMultiAppPacket() {
 function testReceiveBadEncryption() {
 	currentTest = 'receiveBadEncryption'
 	testCount++
+	errorMsg = 'SaltChannel error: EncryptedMessage: Could not decrypt message'
 	
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
-	
-	sc.setOnerror(badEncryptionError)
+
 	receiveBadEncryption()
 }
 
 function testReceiveAfterError() {
 	currentTest = 'receiveAfterError'
 	testCount++
-	
-	sc.setOnerror(notReadyError)
+	errorMsg = 'SaltChannel error: Received message when salt channel was not ready'
 	
 	receiveAppPacket()
 }
@@ -211,10 +237,11 @@ function testReceiveAfterError() {
 function testReceiveDelayed() {
 	currentTest = 'receiveDelayed'
 	testCount++
-	
+	errorMsg = 'SaltChannel error: (Multi)AppPacket: Detected a delayed packet'
+
 	threshold = 20
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
-	
+
 	receiveDelayedPacket()
 	threshold = undefined
 }
@@ -264,11 +291,133 @@ function testStateAfterSentLastFlag() {
 function testWithBadServSigKey() {
 	currentTest = 'withBadServSigKey'
 	testCount++
+	errorMsg = 'SaltChannel error: M2: NoSuchServer exception'
 	
-	newSaltChannelAndHandshake(null, validateM1BadServSigKey, new Uint8Array(32), noSuchServerError)
+	newSaltChannelAndHandshake(null, validateM1BadServSigKey, new Uint8Array(32))
 }
 
-function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey, errorCb) {	
+function testReceiveBadHeaderEnc1() {
+	currentTest = 'receiveBadHeaderEnc1'
+	testCount++
+	errorMsg = 'SaltChannel error: EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was 1 0'
+	badData = new Uint8Array([1, 0])
+
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	receivebadHeaderEnc()
+}
+
+function testReceiveBadHeaderEnc2() {
+	currentTest = 'receiveBadHeaderEnc2'
+	testCount++
+	errorMsg = 'SaltChannel error: EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was 6 2'
+	badData = new Uint8Array([6, 2])
+
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	receivebadHeaderEnc()
+}
+
+function testReceiveBadHeaderApp1() {
+	currentTest = 'receiveBadHeaderApp1'
+	testCount++
+	errorMsg = 'SaltChannel error: (Multi)AppPacket: Bad packet header. Expected 5 0 or 11 0, was 0 0'
+	badData = new Uint8Array([0, 0])
+
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	receivebadHeaderApp()
+}
+
+function testReceiveBadHeaderApp2() {
+	currentTest = 'receiveBadHeaderApp2'
+	testCount++
+	errorMsg = 'SaltChannel error: (Multi)AppPacket: Bad packet header. Expected 5 0 or 11 0, was 5 1'
+	badData = new Uint8Array([5, 1])
+
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	receivebadHeaderApp()
+}
+
+function testReceiveBadHeaderApp3() {
+	currentTest = 'receiveBadHeaderApp3'
+	testCount++
+	errorMsg = 'SaltChannel error: (Multi)AppPacket: Bad packet header. Expected 5 0 or 11 0, was 11 1'
+	badData = new Uint8Array([11, 1])
+
+	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+	receivebadHeaderApp()
+}
+
+function testReceiveBadHeaderM21() {
+	currentTest = 'receiveBadHeaderM21'
+	testCount++
+	errorMsg = 'SaltChannel error: M2: Bad packet header. Expected 2 0 or 2 129, was 3 0'
+	badData = new Uint8Array([3, 0])
+
+	newSaltChannelAndHandshake(null, sendBadM2)
+}
+
+function testReceiveBadHeaderM22() {
+	currentTest = 'receiveBadHeaderM22'
+	testCount++
+	errorMsg = 'SaltChannel error: M2: Bad packet header. Expected 2 0 or 2 129, was 2 50'
+	badData = new Uint8Array([2, 50])
+
+	newSaltChannelAndHandshake(null, sendBadM2)
+}
+
+function testReceiveBadTimeM2() {
+	currentTest = 'receiveBadTimeM2'
+	testCount++
+	errorMsg = 'SaltChannel error: M2: Invalid time value 20'
+	badData = new Uint8Array([2, 0, 20])
+
+	newSaltChannelAndHandshake(null, sendBadM2)
+}
+
+function testReceiveBadHeaderM31() {
+	currentTest = 'receiveBadHeaderM31'
+	testCount++
+	errorMsg = 'SaltChannel error: M3: Bad packet header. Expected 3 0, was 0 0'
+	badData = new Uint8Array([0, 0])
+
+	newSaltChannelAndHandshake(null, sendBadM3)
+}
+
+function testReceiveBadHeaderM32() {
+	currentTest = 'receiveBadHeaderM32'
+	testCount++
+	errorMsg = 'SaltChannel error: M3: Bad packet header. Expected 3 0, was 3 1'
+	badData = new Uint8Array([3, 1])
+
+	newSaltChannelAndHandshake(null, sendBadM3)
+}
+
+function testReceiveBadHeaderM33() {
+	currentTest = 'receiveBadHeaderM33'
+	testCount++
+	errorMsg = 'SaltChannel error: M3: ServerSigKey does not match expected'
+	badData = new Uint8Array([3, 0, 20, 0, 0, 0, 12, 23, 34, 56])
+
+	newSaltChannelAndHandshake(null, sendBadM3, serverSigKeyPair.publicKey)
+}
+
+function testReceiveBadHeaderM34() {
+	currentTest = 'receiveBadHeaderM34'
+	testCount++
+	errorMsg = 'SaltChannel error: M3: Could not verify signature'
+	badData = new Uint8Array([3, 0, 20, 0, 0, 0, 12, 23, 34, 56])
+
+	newSaltChannelAndHandshake(null, sendBadM3)
+}
+
+function testReceiveBadPubEph() {
+	currentTest = 'receiveBadPubEph'
+	testCount++
+	errorMsg = 'SaltChannel error: EncryptedMessage: Could not decrypt message'
+
+	newSaltChannelAndHandshake(null, sendBadEphM2)
+}
+
+function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey) {	
 	eNonce = new Uint8Array(nacl.secretbox.nonceLength)
 	dNonce = new Uint8Array(nacl.secretbox.nonceLength)
 	eNonce[0] = 2
@@ -280,7 +429,7 @@ function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey, err
 	
 	sc = saltChannelSession(mockSocket, threshold)
 	sc.setOnHandshakeComplete(handshakeCompleteCb)
-	sc.setOnerror(errorCb)
+	sc.setOnerror(onError)
 	
 	sc.handshake(clientSigKeyPair, clientEphKeyPair, sigKey)	
 }
@@ -318,6 +467,18 @@ function verifyInit() {
 
 function doNothing() {
 	// Do nothing
+}
+
+function onError(err) {
+	let success
+	let msg = err.message
+	if (msg === errorMsg) {
+		success = true
+	} else {
+		success = false
+	}
+	
+	outcome(success, '  ' + msg)
 }
 
 function sendAppPacket1() {
@@ -438,38 +599,12 @@ function receiveBadEncryption() {
 	sendOnMockSocket(encrypted)
 }
 
-function badEncryptionError(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: Could not decrypt message') {
-		success = true
-	} else {
-		success = false
-	}
-	
-	outcome(success, '  ' + msg)
-}
-
-function notReadyError(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: Received message when salt channel was not ready') {
-		success = true
-	} else {
-		success = false
-	}
-	
-	outcome(success, '  ' + msg)
-}
-
 function receiveDelayedPacket() {
 	if (sc.getState() !== 'ready') {
 		outcome(false, 'Status: ' + sc.getStatus)
 		return;
 	} 
-	
-	sc.setOnerror(delayedPacketError)
-	
+		
 	let appPacket = getAppPacket()
 	
 	appPacket[2] = 2	// Time
@@ -479,18 +614,6 @@ function receiveDelayedPacket() {
 	
 	let encrypted = encrypt(appPacket)
 	sendOnMockSocket(encrypted)
-}
-
-function delayedPacketError(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: (Multi)AppPacket: Detected a delayed packet') {
-		success = true
-	} else {
-		success = false
-	}
-	
-	outcome(success, '  ' + msg)
 }
 
 function receiveLastFlag() {
@@ -508,25 +631,20 @@ function sendLastFlag() {
 	sc.send(true, new Uint8Array(1));
 }
 
-function noSuchServerError(err) {
-	let success
-	let msg = err.message
-	if (msg === 'SaltChannel error: M2: NoSuchServer exception') {
-		success = true
-	} else {
-		success = false
-	}
-	
-	outcome(success, '  ' + msg)
+function receivebadHeaderEnc() {
+	let appPacket = getAppPacket()
+	let encrypted = encrypt(appPacket)
+	encrypted.set(badData)
+
+	sendOnMockSocket(encrypted) 
 }
 
-function outcome(success, msg) {
-	if (success) {
-		passCount++
-		//console.log(currentTest + ' PASSED')
-	} else {
-		console.log(currentTest + ' FAILED! \n' + msg)
-	}
+function receivebadHeaderApp() {
+	let appPacket = getAppPacket()
+	appPacket.set(badData)
+	let encrypted = encrypt(appPacket)
+
+	sendOnMockSocket(encrypted) 
 }
 
 // ==================================================================
@@ -729,12 +847,47 @@ function sendM2NoSuchServer() {
 	sendOnMockSocket(m2)
 }
 
+function sendBadM2() {
+	let m2 = new Uint8Array(38)
+	
+	m2.set(badData)
+	
+	for(let i = 0; i < 32; i++) {
+		m2[6+i] = serverEphKeyPair.publicKey[i]
+	}
+	
+	m2Hash = nacl.hash(m2)
+	
+	sEpoch = util.currentTimeMs()
+	
+	sendOnMockSocket(m2) 
+}
+
+function sendBadEphM2(m1) {
+	let publicEphemeral = new Uint8Array(m1, 10, 32)
+	sessionKey = nacl.box.before(publicEphemeral, serverEphKeyPair.secretKey)
+
+	let m2 = new Uint8Array(38)
+	m2[0] = 2
+	m2[2] = 1
+	m2.set(serverEphKeyPair.publicKey, 6)
+	m2[6] = 0
+	
+	m2Hash = nacl.hash(m2)
+	
+	sEpoch = util.currentTimeMs()
+	
+	sendOnMockSocket(m2) 
+
+	sendM3()
+}
+
 function sendOnMockSocket(data) {
 	mockSocket.onmessage({data: data})
 }
 
 function sendM3() {
-	m3 = new Uint8Array(102)
+	let m3 = new Uint8Array(102)
 
 	m3[0] = 3
 
@@ -760,6 +913,23 @@ function sendM3() {
 	
 	mockSocket.send = validateM4
 	
+	let encrypted = encrypt(m3)
+	sendOnMockSocket(encrypted)
+}
+
+function sendBadM3() {
+	let m2 = new Uint8Array(38)
+	m2[0] = 2
+	m2[2] = 1
+	for(let i = 0; i < 32; i++) {
+		m2[6+i] = serverEphKeyPair.publicKey[i]
+	}	
+	
+	sendOnMockSocket(m2)
+	
+	let m3 = new Uint8Array(102)
+	m3.set(badData)
+
 	let encrypted = encrypt(m3)
 	sendOnMockSocket(encrypted)
 }
@@ -1066,4 +1236,11 @@ function validateAppPacketWithLastFlag(message) {
 }
 
 
-
+function outcome(success, msg) {
+	if (success) {
+		passCount++
+		//console.log(testCount + '. ' + currentTest + ' PASSED')
+	} else {
+		console.log(testCount + '. ' + currentTest + ' FAILED! \n' + msg)
+	}
+}
