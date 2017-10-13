@@ -28,7 +28,7 @@ WORK IN PROGRESS.
 
 ### Log Entries
 
-2017-10-12, Felix, Implementation compliant with V2 Draft7. Improved testing.
+2017-10-13, Felix, Implementation compliant with V2 Draft7. Improved testing.
 
 2017-10-10, Felix, cleanup, implementation closer to V2 Draft7. Functionality is tested.
 
