@@ -18,6 +18,7 @@ module.exports = (ws, thresh = 5000) => {
 	const STATE_HAND = 'handshake'
 	const STATE_READY = 'ready'
 	const STATE_LAST = 'last'
+	const STATE_ERR = 'error'
 	
 	const ADDR_TYPE_ANY = 0
 	const ADDR_TYPE_PUB = 1
@@ -69,12 +70,11 @@ module.exports = (ws, thresh = 5000) => {
 	let onA2Response
 	let onHandshakeComplete
 	let onmessage
+	let onclose
 	
 	init()
 	
 	function reset() {
-		cEpoch = undefined
-		sEpoch = undefined
 		eNonce = undefined
 		dNonce = undefined
 		m1Hash = undefined
@@ -85,10 +85,22 @@ module.exports = (ws, thresh = 5000) => {
 		signKeyPair = undefined
 		ephemeralKeyPair = undefined
 	
+		timeSupported = undefined
+		cEpoch = undefined
+		sEpoch = undefined
+
 		telemetry = undefined
+		let state = saltState
 		saltState = undefined
-	
+
 		init()
+
+		if (typeof onclose === 'function') {
+			onclose(state)
+		} else {
+			console.log('saltchannel.onclose not set')
+			console.log(state)
+		}
 	}
 	
 	function init() {
@@ -215,6 +227,8 @@ module.exports = (ws, thresh = 5000) => {
             prots[i] = {p1: p1, p2: p2}
         }
         
+        saltState = STATE_LAST
+
         if (typeof onA2Response === 'function') {
         	onA2Response(prots)
         } else {
@@ -448,8 +462,12 @@ module.exports = (ws, thresh = 5000) => {
     	onHandshakeComplete = callback
     }
     
-	function setOnmessage(callback){
+	function setOnmessage(callback) {
 		onmessage = callback
+	}
+
+	function setOnclose(callback) {
+		onclose = callback
 	}
 	// =================================================
 	
@@ -462,6 +480,7 @@ module.exports = (ws, thresh = 5000) => {
 	}
 	
 	function error(msg) {
+		saltState = STATE_ERR
 		msg = 'SaltChannel error: ' + msg
 		if (typeof onerror === 'function') {
 			onerror(new Error(msg))
@@ -483,7 +502,8 @@ module.exports = (ws, thresh = 5000) => {
 		if (typeof onHandshakeComplete === 'function') {
 			onHandshakeComplete()
 		} else {
-			error('saltchannel.onHandshakeComplete not set')
+			console.log('saltchannel.onHandshakeComplete not set')
+			console.log()
 		}
 	}
 	
@@ -530,7 +550,7 @@ module.exports = (ws, thresh = 5000) => {
 		}
 
 		if (typeof onmessage !== 'function') {			
-			error('saltchannel.onmessage not set')
+			console.log('saltchannel.onmessage not set')
 			return
 		}
 		
@@ -548,7 +568,7 @@ module.exports = (ws, thresh = 5000) => {
 	
 	function handleAppPacket(appPacket) {
 		if (typeof onmessage !== 'function') {			
-			error('saltchannel.onmessage not set')
+			console.log('saltchannel.onmessage not set')
 			return
 		}
 		let data = getUints(appPacket, appPacket.length - 6, 6)
@@ -782,8 +802,9 @@ module.exports = (ws, thresh = 5000) => {
 		getState: getState,
 		send: send,
 		setOnA2Response: setOnA2Response,
-		setOnerror: setOnerror,
+		setOnError: setOnerror,
 		setOnHandshakeComplete: setOnHandshakeComplete,
-		setOnmessage: setOnmessage
+		setOnMessage: setOnmessage,
+		setOnClose: setOnclose
 	}
 }

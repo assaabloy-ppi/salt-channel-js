@@ -100,8 +100,13 @@ function runTest(send, adressType, adress) {
 	
 	sc = saltChannelSession(mockSocket)
 	sc.setOnA2Response(onA2Response)
-	sc.setOnerror(onError)
+	sc.setOnError(onError)
+	sc.setOnClose(doNothing)
 	sc.a1a2(adressType, adress)
+}
+
+function doNothing() {
+	// Do nothing
 }
 
 /*

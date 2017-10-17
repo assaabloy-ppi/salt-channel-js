@@ -178,7 +178,7 @@ function testReceiveAppPacket() {
 	
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
 	
-	sc.setOnmessage(receiveZeroByte)
+	sc.setOnMessage(receiveZeroByte)
 	receiveAppPacket()
 }
 
@@ -212,7 +212,7 @@ function testReceiveMultiAppPacket() {
 	
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
 	
-	sc.setOnmessage(receiveTwoAppPacketData)
+	sc.setOnMessage(receiveTwoAppPacketData)
 	receiveMultiAppPacket()
 }
 
@@ -258,7 +258,7 @@ function testReceiveLastFlag() {
 	testCount++
 	
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
-	sc.setOnmessage(receiveZeroByte)
+	sc.setOnMessage(receiveZeroByte)
 	
 	receiveLastFlag()
 }
@@ -429,7 +429,8 @@ function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey) {
 	
 	sc = saltChannelSession(mockSocket, threshold)
 	sc.setOnHandshakeComplete(handshakeCompleteCb)
-	sc.setOnerror(onError)
+	sc.setOnError(onError)
+	sc.setOnClose(doNothing)
 	
 	sc.handshake(clientSigKeyPair, clientEphKeyPair, sigKey)	
 }

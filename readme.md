@@ -22,15 +22,18 @@ Table of Contents
 * [Testing](#testing)
   
 Status
-------
+======
 
 WORK IN PROGRESS.
 
-### Log Entries
+Log Entries
+-----------
 
-2017-10-13, Felix, Implementation compliant with V2 Draft7. Improved testing.
+2017-10-17, Felix, implementation compliant with v2 Draft8. Call onclose when session is closed
 
-2017-10-10, Felix, cleanup, implementation closer to V2 Draft7. Functionality is tested.
+2017-10-13, Felix, Implementation compliant with v2 Draft7. Improved testing.
+
+2017-10-10, Felix, cleanup, implementation closer to v2 Draft7. Functionality is tested.
 
 2017-10-05, Felix, cleanup, Java test server removed, testing using a mocket WebSocket 
 
@@ -38,41 +41,27 @@ WORK IN PROGRESS.
 was created in dir java/. Did not move real JavaScript implementation yet.
 
 Dependencies
-------------
+============
 
 Salt Channel is based on [TweetNaCl](http://tweetnacl.cr.yp.to/) and SaltChannel.js uses [TweetNaCl.js](https://tweetnacl.js.org/#/) which has no dependencies.
 
 Usage
------
+=====
 
 Download the [contents of the /js folder](https://github.com/assaabloy-ppi/salt-channel-js/tree/master/js) and include in your script using require. 
 
 	let saltchannel = require('path/to/saltchannel.js')
 
-### Initializing a Salt Channel
-
+Initializing a Salt Channel
+---------------------------
 
 Salt Channel initialization requires a WebSocket and an optional threshold value. The threshold value specifies the tolerance for delayed packets in milliseconds. The higher the threshold value, the more a packet can be delayed without detection. The default value is 5000 ms.
 
 	let sc = saltchannel(ws [, threshold])
 
 
-### Setting Functions for Receiving Messages from Salt Channel
-
-In order to receive messages from Salt Channel you must specify an appropriate callback for one or more events. 
-* onA2Response(prots) is executed by sc when sc has received and parsed A2
-* onSaltChannelError(err) is executed by sc when an error occurs in sc
-* onHandshakeComplete() is executed by sc directly after sc has sent M4
-* onMessage(message) is executed by sc when sc has decrypted and parsed a received message
-
-It is recommended that you execute the set methods before executing a method that relies on a specific callback being set.
-
-	sc.setOnA2Response(onA2Response) 
-	sc.setOnerror(onSaltChannelError) 
-	sc.setOnHandshakeComplete(onHandshakeComplete) 
-	sc.setOnmessage(onMessage) 
-
-### The State of The Salt Channel
+The State of The Salt Channel
+-----------------------------
 
 A Salt Channel can be in five different states: 
 1. 'init' - Initial state. You can execute a1a2 or handshake
@@ -80,12 +69,31 @@ A Salt Channel can be in five different states:
 3. 'handshake' - During handshake execution
 4. 'ready' - After handshake execution. Only state where it is allowed to send or receive messages
 5. 'last' - From when a LastFlag has been read or set until the message has been dispatched to the callback or sent on the WebSocket. After 'last' the Salt Channel is put into 'init'
+6. 'error' - During onError callback. After 'error' the Salt Channel is put into 'init'
 
-If an error occurs the Salt Channel is automatically put in the 'init' state. Callback functions are not reset, so it is possible to set all callbacks, execute a1a2 and on the a2response execute a handshake without having to set new callbacks.
+Callback functions are not reset when Salt Channel is put in the 'init' state, so it is possible to set all callbacks, execute a1a2 and on the a2response execute a handshake without having to set new callbacks. To get the current state of Salt Channel:
 
 	sc.getState()
 
-### The A1A2 Session
+Setting Functions for Receiving Messages from Salt Channel
+----------------------------------------------------------
+
+In order to receive messages from Salt Channel you must specify an appropriate callback for one or more events. It is recommended that you execute the set methods before executing a method that relies on a specific callback being set.
+
+	sc.setOnA2Response(onA2Response) 
+	sc.setOnError(onSaltChannelError) 
+	sc.setOnHandshakeComplete(onHandshakeComplete) 
+	sc.setOnMessage(onMessage) 
+	sc.setOnClose(onClose)
+
+* onA2Response(prots) - Executed by sc when sc has received and parsed A2
+* onSaltChannelError(err) - Executed by sc when an error occurs in sc
+* onHandshakeComplete() - Executed by sc directly after sc has sent M4
+* onMessage(message) - Executed by sc when sc has decrypted and parsed a received message
+* onClose(state) - Executed by sc when the session is closed, i.e. when an error has occurred or when a packet with a LastFlag set has been sent or received. When an error occurrs onClose is called when the Salt Channel has been put in the init state. 
+
+The A1A2 Session
+----------------
 
 The purpose of the A1A2 message exchange is to get information about which protocols the peer supports. To execute the A1A2 message exchange Salt Channel must be in the 'init' state and you need to set a function that receives the response. 
 
@@ -100,7 +108,8 @@ The a1a2 method takes an optional adressType and adress. If omitted the *any adr
 		}
 	}
 
-### Initiating a Handshake
+Initiating a Handshake
+----------------------
 
 In order to be able to send messages over a Salt Channel you must first execute a Salt Channel handshake. To execute a handshake Salt Channel must be in the 'init' state and you need to set a callback that is executed by the Salt Channel when the handshake is completed. It is also recommended that you set onerror and onmessage callbacks.
 
@@ -112,7 +121,8 @@ The handshake method takes the client signing key pair, an ephemeral key pair an
 		console.log(sc.getState()) // 'ready'
 	}
 
-### Sending Messages on the Salt Channel
+Sending Messages on the Salt Channel
+------------------------------------
 
 When the onHandshakeComplete callback is executed you are free to send messages on the Salt Channel. The send method transparently support both AppPacket and MultiAppPacket. The send method takes a boolean value 'last' that specifies if this is the last message to be sent by this session, and either one or more Uint8Arrays or an array of Uint8Arrays. Therefore there are four different ways you can use the send method.
 
@@ -122,7 +132,8 @@ When the onHandshakeComplete callback is executed you are free to send messages 
 	sc.send(last, msg1, msg2, msg3)		// Sends a MultiAppPacket with msg1, msg2, msg3 as data
 	sc.send(last, [msg1, msg2, msg3])	// Logically equivalent to previous row
 
-### Getting Telemetry Information
+Getting Telemetry Information
+-----------------------------
 
 The getTelemetry method returns an object with information about number of bytes sent and received, and the start, end and total time for the handshake execution.
 
@@ -134,17 +145,21 @@ The getTelemetry method returns an object with information about number of bytes
 	console.log(telemetry.handshake.end)
 	console.log(telemetry.handshake.total)
 
-### Code Example With WebSocket
+Code Example With WebSocket
+---------------------------
+
+	let SaltChannel = require('./saltchannel.js')
 
 	let ws = new WebSocket(uri)
 	ws.binaryType = "arraybuffer"
 	let threshold = 1000
 	
-	let sc = saltChannelSession(ws, threshold)
+	let sc = SaltChannel(ws, threshold)
 	sc.setOnA2Response(onA2Response)
 	sc.setOnerror(onSaltChannelError)
 	sc.setOnHandshakeComplete(onHandshakeComplete)
 	sc.setOnmessage(onMessage)
+	sc.setOnClose(onClose)
 	
 	ws.onopen = function(evt) {
 		sc.handshake(mySigKeyPair, myEphemeralKeyPair, serverPublicSigKey)
@@ -167,6 +182,11 @@ The getTelemetry method returns an object with information about number of bytes
 	function onMessage(message) {
 		// message is a Uint8Array that was sent
 		// from the server
+	}
+
+	function onClose(status) {
+		// status is either 'error' or 'last'
+		// depending on why the Salt Channel closed
 	}
 
 Testing
