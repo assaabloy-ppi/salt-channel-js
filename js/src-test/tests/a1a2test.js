@@ -117,7 +117,7 @@ function send1Prot() {
 	a2[1] = byteOne // LastFlag
 	a2[2] = expectedProtCount // Count
 	
-	let p1 = 'SC2-------'
+	let p1 = 'SCc2------'
 	let p2 = '----------'
 	
 	for (let i = 0; i < 10; i++) {
@@ -142,9 +142,9 @@ function send2Prots() {
 	a2[1] = byteOne // LastFlag
 	a2[2] = expectedProtCount // Count
 	
-	let p11 = 'SC2-------'
-	let p12 = '----------'
-	let p21 = 'SC3-------'
+	let p11 = 'SCv2------'
+	let p12 = '-._AZaz9--'
+	let p21 = 'SCv3------'
 	let p22 = 'unicorns--'
 	
 	for (let i = 0; i < 10; i++) {
@@ -171,7 +171,7 @@ function send127Prots() {
 	a2[1] = byteOne // LastFlag
 	a2[2] = expectedProtCount // Count
 	
-	let p1 = 'SC2-------'
+	let p1 = 'SCv2------'
 	let p2 = '----------'
 
 	
@@ -198,7 +198,7 @@ function sendBadPacketLength() {
 	a2[1] = byteOne // LastFlag
 	a2[2] = expectedProtCount // Count
 	
-	let p1 = 'SC2-------'
+	let p1 = 'SCv2------'
 	let p2 = '----------'
 	
 	for (let i = 0; i < 10; i++) {
@@ -221,7 +221,7 @@ function sendBadPacketHeader1() {
 	a2[1] = byteOne // LastFlag
 	a2[2] = expectedProtCount // Count
 	
-	let p1 = 'SC2-------'
+	let p1 = 'SCv2------'
 	let p2 = '----------'
 	
 	for (let i = 0; i < 10; i++) {
@@ -244,7 +244,7 @@ function sendBadPacketHeader2() {
 	a2[1] = badByte // LastFlag
 	a2[2] = expectedProtCount // Count
 	
-	let p1 = 'SC2-------'
+	let p1 = 'SCv2------'
 	let p2 = '----------'
 	
 	for (let i = 0; i < 10; i++) {
@@ -280,7 +280,7 @@ function sendBadCharInP1() {
 	a2[1] = byteOne // LastFlag
 	a2[2] = expectedProtCount // Count
 	
-	let p1 = 'SC2 ------'
+	let p1 = 'SCv2 -----'
 	let p2 = '----------'
 	
 	for (let i = 0; i < 10; i++) {
@@ -302,7 +302,7 @@ function sendBadCharInP2() {
 	a2[1] = byteOne // LastFlag
 	a2[2] = expectedProtCount // Count
 	
-	let p1 = 'SC2-------'
+	let p1 = 'SCv2------'
 	let p2 = '--- ------'
 	
 	for (let i = 0; i < 10; i++) {

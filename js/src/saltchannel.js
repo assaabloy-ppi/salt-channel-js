@@ -197,12 +197,12 @@ module.exports = (ws, thresh = 5000) => {
         	let p2 = ''
         	
         	for (let j = 0; j < 10; j++) {
-        		if (a2[offset] < low || a2[offset] > high) {
+        		if (!validPStringChar(a2[offset])) {
         			error('A2: Invalid char in p1 "' +
         				String.fromCharCode(a2[offset]) + '"')
         			return
         		}
-        		if (a2[offset + 10] < low || a2[offset + 10] > high) {
+        		if (!validPStringChar(a2[offset + 10])) {
         			error('A2: Invalid char in p2 "' +
         				String.fromCharCode(a2[offset + 10]) + '"')
         			return
@@ -226,6 +226,27 @@ module.exports = (ws, thresh = 5000) => {
         reset()
     }
     
+    function validPStringChar(byteValue) {
+    	// '-' to '9' in ASCII
+    	if (byteValue >= 45 && byteValue <= 57) {
+    		return true
+    	}
+    	// 'A' to 'Z' in ASCII
+    	if (byteValue >= 65 && byteValue <= 90) {
+    		return true
+    	}
+    	// '_' in ASCII
+    	if (byteValue === 95) {
+    		return true
+    	}
+    	// 'a' to 'z' in ASCII
+    	if (byteValue >= 97 && byteValue <= 122) {
+    		return true
+    	}
+
+    	return false
+    }
+
     // =================================================
 	
 	// =============== HANDSHAKE BEGIN =================
