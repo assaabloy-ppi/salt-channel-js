@@ -98,7 +98,7 @@ module.exports = (ws, thresh = 5000) => {
 		if (typeof onclose === 'function') {
 			onclose(state)
 		} else {
-			console.log('saltchannel.onclose not set')
+			console.log('saltchannel.onClose not set')
 			console.log(state)
 		}
 	}
@@ -503,7 +503,6 @@ module.exports = (ws, thresh = 5000) => {
 			onHandshakeComplete()
 		} else {
 			console.log('saltchannel.onHandshakeComplete not set')
-			console.log()
 		}
 	}
 	
@@ -550,7 +549,7 @@ module.exports = (ws, thresh = 5000) => {
 		}
 
 		if (typeof onmessage !== 'function') {			
-			console.log('saltchannel.onmessage not set')
+			console.log('saltchannel.onMessage not set')
 			return
 		}
 		
@@ -568,7 +567,7 @@ module.exports = (ws, thresh = 5000) => {
 	
 	function handleAppPacket(appPacket) {
 		if (typeof onmessage !== 'function') {			
-			console.log('saltchannel.onmessage not set')
+			console.log('saltchannel.onMessage not set')
 			return
 		}
 		let data = getUints(appPacket, appPacket.length - 6, 6)
