@@ -7,19 +7,19 @@ var util = require('./../lib/util.js')
  */
 module.exports = (ws, thresh = 5000) => {
 	'use-strict'
-	
+
 	const THRESHOLD = thresh
 	const SIG_STR_1 = 'SC-SIG01'
 	const SIG_STR_2 = 'SC-SIG02'
 	const VERSION_STR = 'SCv2'
-	
+
 	const STATE_INIT = 'init'
 	const STATE_A1A2 = 'a1a2'
 	const STATE_HAND = 'handshake'
 	const STATE_READY = 'ready'
 	const STATE_LAST = 'last'
 	const STATE_ERR = 'error'
-	
+
 	const ADDR_TYPE_ANY = 0
 	const ADDR_TYPE_PUB = 1
 
@@ -44,10 +44,10 @@ module.exports = (ws, thresh = 5000) => {
 	const VERSION = new Uint8Array([ VERSION_STR.charCodeAt(0)
 							, VERSION_STR.charCodeAt(1)
 							, VERSION_STR.charCodeAt(2)
-							, VERSION_STR.charCodeAt(3) ]) 
-	
-	
-	
+							, VERSION_STR.charCodeAt(3) ])
+
+
+
 	let eNonce
 	let dNonce
 	let m1Hash
@@ -57,23 +57,23 @@ module.exports = (ws, thresh = 5000) => {
 	let hostPub
 	let signKeyPair
 	let ephemeralKeyPair
-	
+
 	let timeSupported
 	let cEpoch
 	let sEpoch
-	
+
 	let telemetry
 	let saltState
-	
+
 	// Set by calling corresponding set-function
 	let onerror
 	let onA2Response
 	let onHandshakeComplete
 	let onmessage
 	let onclose
-	
+
 	init()
-	
+
 	function reset() {
 		eNonce = undefined
 		dNonce = undefined
@@ -84,7 +84,7 @@ module.exports = (ws, thresh = 5000) => {
 		hostPub = undefined
 		signKeyPair = undefined
 		ephemeralKeyPair = undefined
-	
+
 		timeSupported = undefined
 		cEpoch = undefined
 		sEpoch = undefined
@@ -102,13 +102,13 @@ module.exports = (ws, thresh = 5000) => {
 			console.log(state)
 		}
 	}
-	
+
 	function init() {
 		eNonce = new Uint8Array(nacl.secretbox.nonceLength)
 		dNonce = new Uint8Array(nacl.secretbox.nonceLength)
 		eNonce[0] = 1
 		dNonce[0] = 2
-		
+
 		telemetry = {
 			bytes: 	{
 					sent: 0,
@@ -120,10 +120,10 @@ module.exports = (ws, thresh = 5000) => {
 					total: 0
 				}
 		}
-		
+
 		saltState = STATE_INIT
 	}
-	
+
 	// =========== A1A2 MESSAGE EXCHANGE ================
 	function a1a2(adressType, adress) {
 		if (saltState === STATE_INIT) {
@@ -133,7 +133,7 @@ module.exports = (ws, thresh = 5000) => {
         	error('A1A2: Invalid internal state: ' + saltState)
         }
     }
-    
+
     function sendA1(adressType = ADDR_TYPE_ANY, adress) {
     	let a1
     	switch (adressType) {
@@ -151,11 +151,11 @@ module.exports = (ws, thresh = 5000) => {
         ws.onmessage = function(evt) {
             handleA2(evt.data)
         }
-                
+
         sendOnWs(a1.buffer)
-        
+
     }
-    
+
     function getA1Any() {
     	let a1 = new Uint8Array(5)
     	a1[0] = 8
@@ -177,37 +177,37 @@ module.exports = (ws, thresh = 5000) => {
     		return
     	}
         let a2 = new Uint8Array(message)
-                
+
         if (validHeader(a2, 9, 129)) {
         	error('A2: NoSuchServer exception')
         	return
         }
         if (!validHeader(a2, 9, 1)) {
-        	error('A2: Bad packet header. Expected 9 1, was ' + 
+        	error('A2: Bad packet header. Expected 9 1, was ' +
         		a2[0] + ' ' + a2[1])
         	return
         }
         let offset = 2
         let count = a2[offset++]
-        
+
         if (count < 1 || count > 127) {
             error('A2: Count must be in range [1, 127], was: ' + count)
             return
         }
-        
+
         if (a2.length !== count*20 + 3) {
             error('A2: Expected packet length ' + (count*20 + 3) +
             	' was ' + a2.length)
             return
         }
-        
+
         let prots = []
         let low = 33
         let high = 126
         for (let i = 0; i < count; i++) {
         	let p1 = ''
         	let p2 = ''
-        	
+
         	for (let j = 0; j < 10; j++) {
         		if (!validPStringChar(a2[offset])) {
         			error('A2: Invalid char in p1 "' +
@@ -223,10 +223,10 @@ module.exports = (ws, thresh = 5000) => {
         		p2 += String.fromCharCode(a2[offset + 10])
         		offset++
         	}
-            
+
             prots[i] = {p1: p1, p2: p2}
         }
-        
+
         saltState = STATE_LAST
 
         if (typeof onA2Response === 'function') {
@@ -235,11 +235,11 @@ module.exports = (ws, thresh = 5000) => {
         	error('saltchannel.onA2Response not set')
         	return
         }
-        
+
         // Do a hard reset and put session in init state
         reset()
     }
-    
+
     function validPStringChar(byteValue) {
     	// '-' to '9' in ASCII
     	if (byteValue >= 45 && byteValue <= 57) {
@@ -262,9 +262,9 @@ module.exports = (ws, thresh = 5000) => {
     }
 
     // =================================================
-	
+
 	// =============== HANDSHAKE BEGIN =================
-	
+
 	function handshake(sigKeyPair, ephKeyPair, hostSigPub) {
 		if (saltState === STATE_INIT) {
 			telemetry.handshake.start = util.currentTimeMs().toFixed(2) - 0
@@ -277,65 +277,65 @@ module.exports = (ws, thresh = 5000) => {
 			error('Handshake: Invalid internal state: ' + saltState)
 		}
 	}
-	
+
 	function sendM1() {
 		let m1Len = (hostPub === undefined) ? 42 : 74
 		let m1 = new Uint8Array(m1Len)
-		
+
 		m1.set(VERSION)
 
 		// Header
 		m1[4] = 1	// Packet type 1
 		m1[5] = (hostPub === undefined) ? 0 : 128
 
-		// Time	
+		// Time
 		setInt32(m1, 1, 6)
-				
+
 		// ClientEncKey
 		m1.set(ephemeralKeyPair.publicKey, 10)
-	
+
 		// ServerSigKey
 		if (hostPub !== undefined) {
 			m1.set(hostPub, 42)
 		}
 		m1Hash = nacl.hash(m1)
-		
-		ws.onmessage = function(evt) { 
-			handleM2(evt) 
+
+		ws.onmessage = function(evt) {
+			handleM2(evt.data)
 		}
 
 		cEpoch = util.currentTimeMs()
-		
+
 		sendOnWs(m1.buffer)
 	}
-	
-	function handleM2(evt) {
+
+	function handleM2(data) {
 		if (saltState !== STATE_HAND) {
     		error('M2: Invalid internal state: ' + saltState)
     		return
     	}
-    	
-		telemetry.bytes.received += evt.data.byteLength
-		
+
+		telemetry.bytes.received += data.byteLength
+
 		// V2 of SaltChannel
-		let m2 = new Uint8Array(evt.data)
-		
+		let m2 = new Uint8Array(data)
+
 		// Header
 		if (validHeader(m2, 2, 0)) {
-			
+
 		} else if (validHeader(m2, 2, 129)) {
 			error('M2: NoSuchServer exception')
 			return;
 		} else {
-			error('M2: Bad packet header. Expected 2 0 or 2 129, was ' 
+			error('M2: Bad packet header. Expected 2 0 or 2 129, was '
 				+ m2[0] + ' ' + m2[1])
 			return
 		}
-		
+
 		// Time
 		let time = getInt32(m2, 2)
 		if (time === 1) {
-			// Time supported by server	
+			// Time supported by server
 			sEpoch = util.currentTimeMs()
 			timeSupported = true
 		} else if (time === 0){
@@ -344,27 +344,27 @@ module.exports = (ws, thresh = 5000) => {
 			error('M2: Invalid time value ' + time)
 			return
 		}
-		
+
 		let serverPub = getUints(m2, 32, 6)
-		
+
 		sessionKey = nacl.box.before(serverPub, ephemeralKeyPair.secretKey)
-				
+
 		m2Hash = nacl.hash(m2)
-		
-		ws.onmessage = function(evt) { 
-			handleM3(evt) 
+
+		ws.onmessage = function(evt) {
+			handleM3(evt.data)
 		}
 	}
-	
-	function handleM3(evt) {
+
+	function handleM3(data) {
 		if (saltState !== STATE_HAND) {
     		error('M3: Invalid internal state: ' + saltState)
     		return
     	}
-    	
-		telemetry.bytes.received += evt.data.byteLength
-		
-		let b = new Uint8Array(evt.data)
+
+		telemetry.bytes.received += data.byteLength
+
+		let b = new Uint8Array(data)
 		let m3 = decrypt(b)
 
 		if (!m3) {
@@ -372,96 +372,96 @@ module.exports = (ws, thresh = 5000) => {
 		}
 		// Header
 		if (!validHeader(m3, 3, 0)) {
-			error('M3: Bad packet header. Expected 3 0, was ' + 
+			error('M3: Bad packet header. Expected 3 0, was ' +
 				m3[0] + ' ' + m3[1])
 			return
 		}
-		
-		// Time	
+
+		// Time
 		if (delayed(m3, 2)) {
 			error('M3: Detected delayed packet')
 			return
 		}
-		
+
 		let serverPub = getUints(m3, 32, 6)
-		
+
 		if (hostPub !== undefined) {
 			if (!util.uint8ArrayEquals(serverPub, hostPub)) {
 				error('M3: ServerSigKey does not match expected')
 				return
 			}
 		}
-		
+
 		let signature = new Uint8Array(64)
 		for (let i = 0; i < 64; i++) {
 			signature[i] = m3[38+i]
 		}
-		
+
 		// Construct the message that was signed
 		let concat = new Uint8Array(2*nacl.hash.hashLength + 8)
 		concat.set(SIG_STR1_BYTES)
 		concat.set(m1Hash, 8)
 		concat.set(m2Hash, 8 + nacl.hash.hashLength)
-			
+
 		let success = nacl.sign.detached.verify(concat, signature, serverPub)
-		
+
 		if (!success) {
 			error('M3: Could not verify signature')
     		return
 		}
-		
+
 		sendM4()
-				
+
 	}
-	
+
 	function sendM4() {
 		// Create m4
 		let m4 = new Uint8Array(102)
-		
+
 		// Header
 		m4[0] = 4
-		
+
 		m4.set(signKeyPair.publicKey, 6)
-		
+
 		let concat = new Uint8Array(2*nacl.hash.hashLength + 8)
 		concat.set(SIG_STR2_BYTES)
 		concat.set(m1Hash, 8)
 		concat.set(m2Hash, 8 + nacl.hash.hashLength)
 		// We only send the signature, NOT the message
 		let signature = nacl.sign.detached(concat, signKeyPair.secretKey)
-		
+
 		m4.set(signature, 38)
-		
+
 		if (timeSupported) {
 			setInt32(m4, cEpoch - util.currentTimeMs(), 2)
 		}
-		
+
 		let encrypted = encrypt(false, m4)
-		
+
 		sendOnWs(encrypted.buffer)
-		
-		ws.onmessage = function(evt) { 
-			onmsg(evt) 
+
+		ws.onmessage = function(evt) {
+			onmsg(evt.data)
 		}
-						
+
 		handshakeComplete()
 	}
-	
+
 	// =================================================
-	
+
 	// ================ SET FUNCTIONS ==================
 	function setOnA2Response(callback) {
     	onA2Response = callback
     }
-    
+
     function setOnerror(callback) {
     	onerror = callback
     }
-    
+
     function setOnHandshakeComplete(callback) {
     	onHandshakeComplete = callback
     }
-    
+
 	function setOnmessage(callback) {
 		onmessage = callback
 	}
@@ -470,15 +470,15 @@ module.exports = (ws, thresh = 5000) => {
 		onclose = callback
 	}
 	// =================================================
-	
+
 	function getTelemetry() {
 		return telemetry
 	}
-	
+
 	function getState() {
 		return saltState
 	}
-	
+
 	function error(msg) {
 		saltState = STATE_ERR
 		msg = 'SaltChannel error: ' + msg
@@ -488,44 +488,44 @@ module.exports = (ws, thresh = 5000) => {
 			console.error('saltchannel.onerror not set')
 			console.error(new Error(msg))
 		}
-		
+
 		// Do a hard reset and put session in init state
 		reset()
 	}
-	
+
 	function handshakeComplete() {
 		saltState = STATE_READY
 		telemetry.handshake.end = util.currentTimeMs().toFixed(2) - 0
 		telemetry.handshake.total = (telemetry.handshake.end - telemetry.handshake.start)
 		telemetry.handshake.total = telemetry.handshake.total.toFixed(2) - 0
-		
+
 		if (typeof onHandshakeComplete === 'function') {
 			onHandshakeComplete()
 		} else {
 			console.log('saltchannel.onHandshakeComplete not set')
 		}
 	}
-	
-	function onmsg(evt) {
+
+	function onmsg(data) {
 		if (saltState !== 'ready') {
 			error('Received message when salt channel was not ready')
 			return
 		}
-		
-		let bytes = new Uint8Array(evt.data)
+
+		let bytes = new Uint8Array(data)
 		telemetry.bytes.received += bytes.byteLength
 
 		let clear = decrypt(bytes)
-		
+
 		if (!clear) {
 			return
 		}
-		
+
 		if (delayed(clear, 2)) {
 			error('(Multi)AppPacket: Detected a delayed packet')
 			return
 		}
-		
+
 		if (validHeader(clear, 5, 0)) {
 			handleAppPacket(clear)
 		} else if (validHeader(clear, 11, 0)) {
@@ -539,41 +539,41 @@ module.exports = (ws, thresh = 5000) => {
 			reset()
 		}
 	}
-	
+
 	function handleMultiAppPacket(multiAppPacket) {
 		let count = getUint16(multiAppPacket, 6)
-		
+
 		if (count === 0) {
 			error('MultiAppPacket: Zero application messages')
 			return
 		}
 
-		if (typeof onmessage !== 'function') {			
+		if (typeof onmessage !== 'function') {
 			console.log('saltchannel.onMessage not set')
 			return
 		}
-		
+
 		let offset = 2 + 4 + 2
 		for (let i = 0; i < count; i++) {
 			let length = getUint16(multiAppPacket, offset)
 			offset += 2
-			
+
 			let data = getUints(multiAppPacket, length, offset)
 			offset += length
-			
-			onmessage(data)
+
+			onmessage(data.buffer)
 		}
 	}
-	
+
 	function handleAppPacket(appPacket) {
-		if (typeof onmessage !== 'function') {			
+		if (typeof onmessage !== 'function') {
 			console.log('saltchannel.onMessage not set')
 			return
 		}
 		let data = getUints(appPacket, appPacket.length - 6, 6)
-		onmessage(data)
+		onmessage(data.buffer)
 	}
-	
+
 	function sendOnWs(message) {
 		if (message instanceof ArrayBuffer) {
 			telemetry.bytes.sent += message.byteLength
@@ -582,7 +582,7 @@ module.exports = (ws, thresh = 5000) => {
 			error('Must only send ArrayBuffer')
 		}
 	}
-	
+
 	function decrypt(message) {
 		if (validHeader(message, 6, 0)) {
 			// Regular message
@@ -590,21 +590,21 @@ module.exports = (ws, thresh = 5000) => {
 			// Last message
 			saltState = STATE_LAST;
 		} else {
-			error('EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was ' 
+			error('EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was '
 				+ message[0] + ' ' + message[1])
 			return null
 		}
-		
+
 		let bytes = new Uint8Array(message.byteLength - 2)
 		let msg = new Uint8Array(message)
-		
+
 		for (let i = 0; i < message.byteLength - 2; i++) {
 			bytes[i] = msg[i+2]
 		}
-				
+
 		let clear = nacl.secretbox.open(bytes, dNonce, sessionKey)
 		dNonce = increaseNonce2(dNonce)
-		
+
 		if (!clear) {
 			error('EncryptedMessage: Could not decrypt message')
 			return null
@@ -615,62 +615,62 @@ module.exports = (ws, thresh = 5000) => {
 
 		return clear
 	}
-	
+
 	function validHeader(uints, first, second, offset = 0) {
 		if (uints[offset] !== first | uints[offset + 1] !== second) {
 			return false
 		}
 		return true
 	}
-	
+
 	function delayed(uints, offset) {
 		if (timeSupported) {
 			let time = getInt32(uints, offset)
 			let expectedTime = util.currentTimeMs() - cEpoch
 			return expectedTime > time + THRESHOLD
 		}
-		
+
 		return false
 	}
-	
+
 	function getUints(from, length, offset = 0) {
 		let uints = new Uint8Array(length)
-		
+
 		for (let i = 0; i < length; i++) {
 			uints[i] = from[offset++]
 		}
-		
+
 		return uints
 	}
-	
+
 	function getInt32(uints, offset) {
 		let int32 = new Uint8Array(4)
 		int32[0] = uints[offset++]
 		int32[1] = uints[offset++]
 		int32[2] = uints[offset++]
 		int32[3] = uints[offset++]
-		
+
 		return (new Int32Array(int32.buffer))[0]
 	}
-	
+
 	function setInt32(uints, data, offset) {
 		let int32 = new Int32Array([data])
 		uints.set(int32, offset)
 	}
-	
+
 	function getUint16(uints, offset) {
 		let uint16 = new Uint8Array(2)
 		uint16[0] = uints[offset++]
 		uint16[1] = uints[offset]
-		
+
 		return (new Uint16Array(uint16.buffer))[0]
 	}
-	
+
 	function setUint16(uints, data, offset) {
 		let uint16 = new Uint16Array([data])
 		uints.set(uint16, offset)
 	}
-	
+
 	function send(last, arg) {
 		if (last) {
 			saltState = STATE_LAST
@@ -696,26 +696,26 @@ module.exports = (ws, thresh = 5000) => {
 			}
 			sendMultiAppPacket(last, arr)
 		}
-		
+
 		if (saltState === STATE_LAST) {
 			reset()
 		}
 	}
-	
+
 	function sendAppPacket(last, data) {
 		let appPacket = new Uint8Array(data.length + 6)
-		
+
 		appPacket[0] = 5
 		appPacket.set(data, 6)
-		
+
 		if (timeSupported) {
 			setInt32(appPacket, cEpoch - util.currentTimeMs(), 2)
 		}
-	
+
 		let encrypted = encrypt(last, appPacket)
 		sendOnWs(encrypted.buffer)
 	}
-	
+
 	function sendMultiAppPacket(last, arr) {
 		if (arr.length > 65535) {
 			error('Too many application messages')
@@ -729,37 +729,37 @@ module.exports = (ws, thresh = 5000) => {
 			}
 			size += 2 + arr[i].length
 		}
-		
+
 		let multiAppPacket = new Uint8Array(size)
 		multiAppPacket[0] = 11
-		
+
 		let offset = 6
 		setUint16(multiAppPacket, arr.length, offset)
-		
+
 		offset = 8
 		for (let i = 0; i < arr.length; i++) {
 			writeMessage(multiAppPacket, arr[i], offset)
 			offset += arr[i].length + 2
 		}
-		
+
 		if (timeSupported) {
 			setInt32(multiAppPacket, cEpoch - util.currentTimeMs(), 2)
 		}
-		
+
 		let encrypted = encrypt(last, multiAppPacket)
 		sendOnWs(encrypted.buffer)
 	}
-	
+
 	function writeMessage(multiAppPacket, uints, offset) {
 		setUint16(multiAppPacket, uints.length, offset)
 		offset += 2
 		multiAppPacket.set(uints, offset)
 	}
-	
+
 	function encrypt(last, clearBytes) {
 		let body = nacl.secretbox(clearBytes, eNonce, sessionKey)
 		eNonce = increaseNonce2(eNonce)
-	
+
 		let encryptedMessage = new Uint8Array(body.length + 2)
 		encryptedMessage[0] = 6
 		encryptedMessage[1] = last ? 1 : 0
@@ -767,7 +767,7 @@ module.exports = (ws, thresh = 5000) => {
 
 		return encryptedMessage
 	}
-	
+
 	function increaseNonce(nonce) {
 		if (!(nonce instanceof Uint8Array)) {
 			throw new Error('Expected Uint8Array. \n\t' +
@@ -793,7 +793,7 @@ module.exports = (ws, thresh = 5000) => {
 		nonce = increaseNonce(nonce)
 		return nonce
 	}
-	
+
 	return {
 		a1a2: a1a2,
 		handshake: handshake,
