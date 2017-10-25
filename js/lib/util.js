@@ -25,7 +25,7 @@ exports.hex2Uint8Arr = (str) => {
 exports.uint8ArrayEquals = (uints1, uints2) => {
 	if (!(uints1 instanceof Uint8Array) ||
 		!(uints2 instanceof Uint8Array)) {
-		throw new Error("Expected Uint8Arrays")	
+		throw new Error("Expected Uint8Arrays")
 	}
 	if (uints1.length !== uints2.length) {
 		return false
@@ -59,21 +59,21 @@ exports.isArray = (arg) => {
 }
 
 /**
- * Parameters: 
+ * Parameters:
  *		buffer1 	- an ArrayBuffer instance
  *		buffer2		- an ArrayBuffer instance
  *
  * Returns:
  *		true iff the two ArrayBuffers contains identical bytes
  *		false otherwise
- * 
- * Throws error: 
+ *
+ * Throws error:
  *		if buffer1 and buffer2 are not ArrayBuffers
  */
 exports.bufferEquals = (buffer1, buffer2) => {
 	if (!(buffer1 instanceof ArrayBuffer) ||
 		!(buffer2 instanceof ArrayBuffer)) {
-		throw new Error("Expected ArrayBuffers")	
+		throw new Error("Expected ArrayBuffers")
 	}
 	let bytes1 = new Uint8Array(buffer1)
 	let bytes2 = new Uint8Array(buffer2)
