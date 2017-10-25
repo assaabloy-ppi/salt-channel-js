@@ -219,7 +219,7 @@ function testReceiveMultiAppPacket() {
 function testReceiveBadEncryption() {
 	currentTest = 'receiveBadEncryption'
 	testCount++
-	errorMsg = 'SaltChannel error: EncryptedMessage: Could not decrypt message'
+	errorMsg = 'EncryptedMessage: Could not decrypt message'
 
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
 
@@ -229,7 +229,7 @@ function testReceiveBadEncryption() {
 function testReceiveAfterError() {
 	currentTest = 'receiveAfterError'
 	testCount++
-	errorMsg = 'SaltChannel error: Received message when salt channel was not ready'
+	errorMsg = 'Received message when salt channel was not ready'
 
 	receiveAppPacket()
 }
@@ -237,7 +237,7 @@ function testReceiveAfterError() {
 function testReceiveDelayed() {
 	currentTest = 'receiveDelayed'
 	testCount++
-	errorMsg = 'SaltChannel error: (Multi)AppPacket: Detected a delayed packet'
+	errorMsg = '(Multi)AppPacket: Detected a delayed packet'
 
 	threshold = 20
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
@@ -291,7 +291,7 @@ function testStateAfterSentLastFlag() {
 function testWithBadServSigKey() {
 	currentTest = 'withBadServSigKey'
 	testCount++
-	errorMsg = 'SaltChannel error: M2: NoSuchServer exception'
+	errorMsg = 'M2: NoSuchServer exception'
 
 	newSaltChannelAndHandshake(null, validateM1BadServSigKey, new Uint8Array(32))
 }
@@ -299,7 +299,7 @@ function testWithBadServSigKey() {
 function testReceiveBadHeaderEnc1() {
 	currentTest = 'receiveBadHeaderEnc1'
 	testCount++
-	errorMsg = 'SaltChannel error: EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was 1 0'
+	errorMsg = 'EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was 1 0'
 	badData = new Uint8Array([1, 0])
 
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
@@ -309,7 +309,7 @@ function testReceiveBadHeaderEnc1() {
 function testReceiveBadHeaderEnc2() {
 	currentTest = 'receiveBadHeaderEnc2'
 	testCount++
-	errorMsg = 'SaltChannel error: EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was 6 2'
+	errorMsg = 'EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was 6 2'
 	badData = new Uint8Array([6, 2])
 
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
@@ -319,7 +319,7 @@ function testReceiveBadHeaderEnc2() {
 function testReceiveBadHeaderApp1() {
 	currentTest = 'receiveBadHeaderApp1'
 	testCount++
-	errorMsg = 'SaltChannel error: (Multi)AppPacket: Bad packet header. Expected 5 0 or 11 0, was 0 0'
+	errorMsg = '(Multi)AppPacket: Bad packet header. Expected 5 0 or 11 0, was 0 0'
 	badData = new Uint8Array([0, 0])
 
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
@@ -329,7 +329,7 @@ function testReceiveBadHeaderApp1() {
 function testReceiveBadHeaderApp2() {
 	currentTest = 'receiveBadHeaderApp2'
 	testCount++
-	errorMsg = 'SaltChannel error: (Multi)AppPacket: Bad packet header. Expected 5 0 or 11 0, was 5 1'
+	errorMsg = '(Multi)AppPacket: Bad packet header. Expected 5 0 or 11 0, was 5 1'
 	badData = new Uint8Array([5, 1])
 
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
@@ -339,7 +339,7 @@ function testReceiveBadHeaderApp2() {
 function testReceiveBadHeaderApp3() {
 	currentTest = 'receiveBadHeaderApp3'
 	testCount++
-	errorMsg = 'SaltChannel error: (Multi)AppPacket: Bad packet header. Expected 5 0 or 11 0, was 11 1'
+	errorMsg = '(Multi)AppPacket: Bad packet header. Expected 5 0 or 11 0, was 11 1'
 	badData = new Uint8Array([11, 1])
 
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
@@ -349,7 +349,7 @@ function testReceiveBadHeaderApp3() {
 function testReceiveBadHeaderM21() {
 	currentTest = 'receiveBadHeaderM21'
 	testCount++
-	errorMsg = 'SaltChannel error: M2: Bad packet header. Expected 2 0 or 2 129, was 3 0'
+	errorMsg = 'M2: Bad packet header. Expected 2 0 or 2 129, was 3 0'
 	badData = new Uint8Array([3, 0])
 
 	newSaltChannelAndHandshake(null, sendBadM2)
@@ -358,7 +358,7 @@ function testReceiveBadHeaderM21() {
 function testReceiveBadHeaderM22() {
 	currentTest = 'receiveBadHeaderM22'
 	testCount++
-	errorMsg = 'SaltChannel error: M2: Bad packet header. Expected 2 0 or 2 129, was 2 50'
+	errorMsg = 'M2: Bad packet header. Expected 2 0 or 2 129, was 2 50'
 	badData = new Uint8Array([2, 50])
 
 	newSaltChannelAndHandshake(null, sendBadM2)
@@ -367,7 +367,7 @@ function testReceiveBadHeaderM22() {
 function testReceiveBadTimeM2() {
 	currentTest = 'receiveBadTimeM2'
 	testCount++
-	errorMsg = 'SaltChannel error: M2: Invalid time value 20'
+	errorMsg = 'M2: Invalid time value 20'
 	badData = new Uint8Array([2, 0, 20])
 
 	newSaltChannelAndHandshake(null, sendBadM2)
@@ -376,7 +376,7 @@ function testReceiveBadTimeM2() {
 function testReceiveBadHeaderM31() {
 	currentTest = 'receiveBadHeaderM31'
 	testCount++
-	errorMsg = 'SaltChannel error: M3: Bad packet header. Expected 3 0, was 0 0'
+	errorMsg = 'M3: Bad packet header. Expected 3 0, was 0 0'
 	badData = new Uint8Array([0, 0])
 
 	newSaltChannelAndHandshake(null, sendBadM3)
@@ -385,7 +385,7 @@ function testReceiveBadHeaderM31() {
 function testReceiveBadHeaderM32() {
 	currentTest = 'receiveBadHeaderM32'
 	testCount++
-	errorMsg = 'SaltChannel error: M3: Bad packet header. Expected 3 0, was 3 1'
+	errorMsg = 'M3: Bad packet header. Expected 3 0, was 3 1'
 	badData = new Uint8Array([3, 1])
 
 	newSaltChannelAndHandshake(null, sendBadM3)
@@ -394,7 +394,7 @@ function testReceiveBadHeaderM32() {
 function testReceiveBadHeaderM33() {
 	currentTest = 'receiveBadHeaderM33'
 	testCount++
-	errorMsg = 'SaltChannel error: M3: ServerSigKey does not match expected'
+	errorMsg = 'M3: ServerSigKey does not match expected'
 	badData = new Uint8Array([3, 0, 20, 0, 0, 0, 12, 23, 34, 56])
 
 	newSaltChannelAndHandshake(null, sendBadM3, serverSigKeyPair.publicKey)
@@ -403,7 +403,7 @@ function testReceiveBadHeaderM33() {
 function testReceiveBadHeaderM34() {
 	currentTest = 'receiveBadHeaderM34'
 	testCount++
-	errorMsg = 'SaltChannel error: M3: Could not verify signature'
+	errorMsg = 'M3: Could not verify signature'
 	badData = new Uint8Array([3, 0, 20, 0, 0, 0, 12, 23, 34, 56])
 
 	newSaltChannelAndHandshake(null, sendBadM3)
@@ -412,7 +412,7 @@ function testReceiveBadHeaderM34() {
 function testReceiveBadPubEph() {
 	currentTest = 'receiveBadPubEph'
 	testCount++
-	errorMsg = 'SaltChannel error: EncryptedMessage: Could not decrypt message'
+	errorMsg = 'EncryptedMessage: Could not decrypt message'
 
 	newSaltChannelAndHandshake(null, sendBadEphM2)
 }
@@ -431,7 +431,7 @@ function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey) {
 	sc.setOnHandshakeComplete(handshakeCompleteCb)
 	sc.setOnError(onError)
 	sc.setOnClose(doNothing)
-
+	
 	sc.handshake(clientSigKeyPair, clientEphKeyPair, sigKey)
 }
 
@@ -487,7 +487,7 @@ function sendAppPacket1() {
 		outcome(false, 'Status: ' + sc.getStatus)
 		return;
 	}
-	sc.send(false, new Uint8Array([0]))
+	sc.send(false, new Uint8Array([0]).buffer)
 }
 
 function sendAppPacket2() {
@@ -518,7 +518,7 @@ function getAppPacket() {
 }
 
 function receiveZeroByte(message) {
-	if (!message instanceof ArrayBuffer) {
+	if (!(message instanceof ArrayBuffer)) {
 		outcome(false, '  Expected ArrayBuffer from Salt Channel')
 		return
 	}
@@ -534,7 +534,7 @@ function sendMultiAppPacket1() {
 		outcome(false, 'Status: ' + sc.getStatus)
 		return;
 	}
-	sc.send(false, [new Uint8Array([0]), new Uint8Array([1])])
+	sc.send(false, [new Uint8Array([0]).buffer, new Uint8Array([1])])
 }
 
 function sendMultiAppPacket2() {
@@ -542,7 +542,7 @@ function sendMultiAppPacket2() {
 		outcome(false, 'Status: ' + sc.getStatus)
 		return;
 	}
-	sc.send(false, new Uint8Array([0]), new Uint8Array([1]))
+	sc.send(false, new Uint8Array([0]), new Uint8Array([1]).buffer)
 }
 
 function receiveMultiAppPacket() {
@@ -571,7 +571,7 @@ function getMultiAppPacket() {
 }
 
 function receiveTwoAppPacketData(message) {
-	if (!message instanceof ArrayBuffer) {
+	if (!(message instanceof ArrayBuffer)) {
 		outcome(false, '  Expected ArrayBuffer from Salt Channel')
 		return
 	}
@@ -663,7 +663,7 @@ function receivebadHeaderApp() {
 // ============================ (sorta) =============================
 
 function validateM1NoServSigKey(message) {
-	if (!message instanceof ArrayBuffer) {
+	if (!(message instanceof ArrayBuffer)) {
 		outcome(false, '  Expected ArrayBuffer from Salt Channel')
 		return
 	}
@@ -717,7 +717,7 @@ function validateM1NoServSigKey(message) {
 }
 
 function validateM1WithServSigKey(message) {
-	if (!message instanceof ArrayBuffer) {
+	if (!(message instanceof ArrayBuffer)) {
 		outcome(false, '  Expected ArrayBuffer from Salt Channel')
 		return
 	}
@@ -777,7 +777,7 @@ function validateM1WithServSigKey(message) {
 }
 
 function validateM1BadServSigKey(message) {
-	if (!message instanceof ArrayBuffer) {
+	if (!(message instanceof ArrayBuffer)) {
 		outcome(false, '  Expected ArrayBuffer from Salt Channel')
 		return
 	}
@@ -956,7 +956,7 @@ function sendBadM3() {
 }
 
 function validateM4(message) {
-	if (!message instanceof ArrayBuffer) {
+	if (!(message instanceof ArrayBuffer)) {
 		outcome(false, '  Expected ArrayBuffer from Salt Channel')
 		return
 	}
@@ -1120,7 +1120,7 @@ function increaseNonce2(nonce) {
 // ==================================================================
 
 function validateAppPacket(message) {
-	if (!message instanceof ArrayBuffer) {
+	if (!(message instanceof ArrayBuffer)) {
 		outcome(false, '  Expected ArrayBuffer from Salt Channel')
 		return
 	}
@@ -1162,7 +1162,7 @@ function validateAppPacket(message) {
 }
 
 function validateMultiAppPacket(message) {
-	if (!message instanceof ArrayBuffer) {
+	if (!(message instanceof ArrayBuffer)) {
 		outcome(false, '  Expected ArrayBuffer from Salt Channel')
 		return
 	}
@@ -1227,7 +1227,7 @@ function validateMultiAppPacket(message) {
 }
 
 function validateAppPacketWithLastFlag(message) {
-	if (!message instanceof ArrayBuffer) {
+	if (!(message instanceof ArrayBuffer)) {
 		outcome(false, '  Expected ArrayBuffer from Salt Channel')
 		return
 	}

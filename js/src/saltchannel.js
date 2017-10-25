@@ -98,8 +98,8 @@ module.exports = (ws, thresh = 5000) => {
 		if (typeof onclose === 'function') {
 			onclose(state)
 		} else {
-			console.log('saltchannel.onClose not set')
-			console.log(state)
+			console.error('saltchannel.onClose not set')
+			console.error(state)
 		}
 	}
 
@@ -130,7 +130,7 @@ module.exports = (ws, thresh = 5000) => {
 			saltState = STATE_A1A2
         	sendA1(adressType, adress)
         } else {
-        	error('A1A2: Invalid internal state: ' + saltState)
+        	throw new Error('A1A2: Invalid internal state: ' + saltState)
         }
     }
 
@@ -144,8 +144,7 @@ module.exports = (ws, thresh = 5000) => {
     			a1 = getA1Pub(adress)
     			break
     		default:
-    			error('A1A2: Unsupported adress type: ' + adressType)
-        		return
+    			throw new RangeError('A1A2: Unsupported adress type: ' + adressType)
     	}
 
         ws.onmessage = function(evt) {
@@ -163,6 +162,11 @@ module.exports = (ws, thresh = 5000) => {
     }
 
     function getA1Pub(adress) {
+    	if (adress instanceof ArrayBuffer) {
+    		adress = new Uint8Array(adress)
+    	} else if (!(adress instanceof Uint8Array)) {
+    		throw new TypeError('A1A2: Expected adress to be ArrayBuffer or Uint8Array')
+    	}
 		let a1 = new Uint8Array(5 + adress.length)
         a1[0] = 8
         a1[2] = ADDR_TYPE_PUB
@@ -232,8 +236,7 @@ module.exports = (ws, thresh = 5000) => {
         if (typeof onA2Response === 'function') {
         	onA2Response(prots)
         } else {
-        	error('saltchannel.onA2Response not set')
-        	return
+        	console.error('saltchannel.onA2Response not set')
         }
 
         // Do a hard reset and put session in init state
@@ -266,6 +269,9 @@ module.exports = (ws, thresh = 5000) => {
 	// =============== HANDSHAKE BEGIN =================
 
 	function handshake(sigKeyPair, ephKeyPair, hostSigPub) {
+		verifySigKeyPair(sigKeyPair)
+		verifyEphKeyPair(ephKeyPair)
+		verifyHostSigPub(hostSigPub)
 		if (saltState === STATE_INIT) {
 			telemetry.handshake.start = util.currentTimeMs().toFixed(2) - 0
 			signKeyPair = sigKeyPair
@@ -274,7 +280,48 @@ module.exports = (ws, thresh = 5000) => {
 			saltState = STATE_HAND
 			sendM1()
 		} else {
-			error('Handshake: Invalid internal state: ' + saltState)
+			throw new Error('Handshake: Invalid internal state: ' + saltState)
+		}
+	}
+
+	function verifySigKeyPair(keyPair) {
+		let pub = keyPair.publicKey
+		let sec = keyPair.secretKey
+		if (!pub || !sec) {
+			throw new TypeError('sigKeyPair must have publicKey and secretKey properties')
+		}
+		if (!(pub instanceof Uint8Array) ||
+			!(sec instanceof Uint8Array)) {
+			throw new TypeError('sigKeyPair.publicKey & sigKeyPair.secretKey must be Uint8Array')
+		}
+		if (pub.length !== nacl.sign.publicKeyLength ||
+			sec.length !== nacl.sign.secretKeyLength) {
+			throw new TypeError('sigKeyPair.publicKey & sigKeyPair.secretKey must be 32 and 64 bytes')
+		}
+	}
+	function verifyEphKeyPair(keyPair) {
+		let pub = keyPair.publicKey
+		let sec = keyPair.secretKey
+		if (!pub || !sec) {
+			throw new TypeError('ephKeyPair must have publicKey and secretKey properties')
+		}
+		if (!(pub instanceof Uint8Array) ||
+			!(sec instanceof Uint8Array)) {
+			throw new TypeError('ephKeyPair.publicKey & ephKeyPair.secretKey must be Uint8Array')
+		}
+		if (pub.length !== nacl.box.publicKeyLength ||
+			sec.length !== nacl.box.secretKeyLength) {
+			throw new TypeError('ephKeyPair.publicKey & ephKeyPair.secretKey must be 32 and 64 bytes')
+		}
+	}
+	function verifyHostSigPub(key) {
+		if (key) {
+			if (!(key instanceof Uint8Array)) {
+				throw new TypeError('hostSigPub must be Uint8Array')
+			}
+			if (key.length !== nacl.sign.publicKeyLength) {
+				throw new TypeError('hostSigPub must be 32 bytes')
+			}
 		}
 	}
 
@@ -295,7 +342,7 @@ module.exports = (ws, thresh = 5000) => {
 		m1.set(ephemeralKeyPair.publicKey, 10)
 
 		// ServerSigKey
-		if (hostPub !== undefined) {
+		if (hostPub) {
 			m1.set(hostPub, 42)
 		}
 		m1Hash = nacl.hash(m1)
@@ -385,7 +432,7 @@ module.exports = (ws, thresh = 5000) => {
 
 		let serverPub = getUints(m3, 32, 6)
 
-		if (hostPub !== undefined) {
+		if (hostPub) {
 			if (!util.uint8ArrayEquals(serverPub, hostPub)) {
 				error('M3: ServerSigKey does not match expected')
 				return
@@ -481,7 +528,6 @@ module.exports = (ws, thresh = 5000) => {
 
 	function error(msg) {
 		saltState = STATE_ERR
-		msg = 'SaltChannel error: ' + msg
 		if (typeof onerror === 'function') {
 			onerror(new Error(msg))
 		} else {
@@ -502,12 +548,12 @@ module.exports = (ws, thresh = 5000) => {
 		if (typeof onHandshakeComplete === 'function') {
 			onHandshakeComplete()
 		} else {
-			console.log('saltchannel.onHandshakeComplete not set')
+			console.error('saltchannel.onHandshakeComplete not set')
 		}
 	}
 
 	function onmsg(data) {
-		if (saltState !== 'ready') {
+		if (saltState !== STATE_READY) {
 			error('Received message when salt channel was not ready')
 			return
 		}
@@ -549,7 +595,7 @@ module.exports = (ws, thresh = 5000) => {
 		}
 
 		if (typeof onmessage !== 'function') {
-			console.log('saltchannel.onMessage not set')
+			console.error('saltchannel.onMessage not set')
 			return
 		}
 
@@ -567,7 +613,7 @@ module.exports = (ws, thresh = 5000) => {
 
 	function handleAppPacket(appPacket) {
 		if (typeof onmessage !== 'function') {
-			console.log('saltchannel.onMessage not set')
+			console.error('saltchannel.onMessage not set')
 			return
 		}
 		let data = getUints(appPacket, appPacket.length - 6, 6)
@@ -579,7 +625,7 @@ module.exports = (ws, thresh = 5000) => {
 			telemetry.bytes.sent += message.byteLength
 			ws.send(message)
 		} else {
-			error('Must only send ArrayBuffer')
+			throw new TypeError('Must only send ArrayBuffer on WebSocket')
 		}
 	}
 
@@ -672,12 +718,13 @@ module.exports = (ws, thresh = 5000) => {
 	}
 
 	function send(last, arg) {
+		if (saltState !== STATE_READY) {
+			throw new Error('Invalid state: ' + saltState)
+		}
 		if (last) {
 			saltState = STATE_LAST
 		}
-		if (arguments.length < 2) {
-			return
-		}
+
 		if (arguments.length === 2) {
 			if (util.isArray(arg)) {
 				if (arg.length === 1) {
@@ -703,6 +750,12 @@ module.exports = (ws, thresh = 5000) => {
 	}
 
 	function sendAppPacket(last, data) {
+		if (data instanceof ArrayBuffer) {
+			data = new Uint8Array(data)
+		} else if (!(data instanceof Uint8Array)) {
+			throw new TypeError('Expected data to be ArrayBuffer or Uint8Array')
+		}
+
 		let appPacket = new Uint8Array(data.length + 6)
 
 		appPacket[0] = 5
@@ -718,14 +771,17 @@ module.exports = (ws, thresh = 5000) => {
 
 	function sendMultiAppPacket(last, arr) {
 		if (arr.length > 65535) {
-			error('Too many application messages')
-			return
+			throw new RangeError('Too many application messages')
 		}
 		let size = 2 + 4 + 2
 		for (let i = 0; i < arr.length; i++) {
+			if (arr[i] instanceof ArrayBuffer) {
+				arr[i] = new Uint8Array(arr[i])
+			} else if (!(arr[i] instanceof Uint8Array)) {
+				throw new TypeError('Expected data to be ArrayBuffer or Uint8Array')
+			}
 			if (arr[i].length > 65535) {
-				error('Application message ' + i + ' too large')
-				return
+				throw new RangeError('Application message ' + i + ' too large')
 			}
 			size += 2 + arr[i].length
 		}
@@ -797,9 +853,11 @@ module.exports = (ws, thresh = 5000) => {
 	return {
 		a1a2: a1a2,
 		handshake: handshake,
+		send: send,
+
 		getTelemetry: getTelemetry,
 		getState: getState,
-		send: send,
+
 		setOnA2Response: setOnA2Response,
 		setOnError: setOnerror,
 		setOnHandshakeComplete: setOnHandshakeComplete,

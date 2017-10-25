@@ -39,19 +39,19 @@ exports.run = () => {
 	runTest(send127Prots)
 
 	currentTest = 'nonInit'
-	errorMsg = 'SaltChannel error: A1A2: Invalid internal state: a1a2'
+	errorMsg = 'A1A2: Invalid internal state: a1a2'
 	runTest(sendOnBadState)
 
 	currentTest = 'badPacketLength'
-	errorMsg = 'SaltChannel error: A2: Expected packet length 23 was 43'
+	errorMsg = 'A2: Expected packet length 23 was 43'
 	runTest(sendBadPacketLength)
 
 	currentTest = 'badPacketHeader1'
-	errorMsg = 'SaltChannel error: A2: Bad packet header. Expected 9 1, was 0 1'
+	errorMsg = 'A2: Bad packet header. Expected 9 1, was 0 1'
 	runTest(sendBadPacketHeader1)
 
 	currentTest = 'badPacketHeader2'
-	errorMsg = 'SaltChannel error: A2: Bad packet header. Expected 9 1, was 9 0'
+	errorMsg = 'A2: Bad packet header. Expected 9 1, was 9 0'
 	runTest(sendBadPacketHeader2)
 
 	mockSocket.send = validateA1Pub
@@ -60,29 +60,29 @@ exports.run = () => {
 
 	mockSocket.send = validateA1ZeroPub
 	currentTest = 'noSuchServer'
-	errorMsg = 'SaltChannel error: A2: NoSuchServer exception'
+	errorMsg = 'A2: NoSuchServer exception'
 	runTest(sendNoSuchServer, 1, new Uint8Array(32))
 
 	mockSocket.send = null
 	currentTest = 'badAdressType'
-	errorMsg = 'SaltChannel error: A1A2: Unsupported adress type: 2'
-	runTest(null, 2, null)
+	errorMsg = 'A1A2: Unsupported adress type: 2'
+	runTest2(null, 2, null)
 
 	mockSocket.send = validateA1Any
 	currentTest = 'badCharInP1'
-	errorMsg = 'SaltChannel error: A2: Invalid char in p1 " "'
+	errorMsg = 'A2: Invalid char in p1 " "'
 	runTest(sendBadCharInP1)
 
 	currentTest = 'badCharInP2'
-	errorMsg = 'SaltChannel error: A2: Invalid char in p2 " "'
+	errorMsg = 'A2: Invalid char in p2 " "'
 	runTest(sendBadCharInP2)
 
 	currentTest = 'badCount1'
-	errorMsg = 'SaltChannel error: A2: Count must be in range [1, 127], was: 0'
+	errorMsg = 'A2: Count must be in range [1, 127], was: 0'
 	runTest(sendBadCount1)
 
 	currentTest = 'badCount2'
-	errorMsg = 'SaltChannel error: A2: Count must be in range [1, 127], was: 128'
+	errorMsg = 'A2: Count must be in range [1, 127], was: 128'
 	runTest(sendBadCount2)
 
 
@@ -103,6 +103,25 @@ function runTest(send, adressType, adress) {
 	sc.setOnError(onError)
 	sc.setOnClose(doNothing)
 	sc.a1a2(adressType, adress)
+}
+
+function runTest2(send, adressType, adress) {
+	testCount++
+	sendA2 = send
+
+	sc = saltChannelSession(mockSocket)
+	sc.setOnA2Response(onA2Response)
+	sc.setOnError(onError)
+	sc.setOnClose(doNothing)
+	let success = false
+	try {
+		sc.a1a2(adressType, adress)
+	} catch (err) {
+		if (err.message === errorMsg) {
+			success = true
+		}
+	}
+	outcome(success, errorMsg)
 }
 
 function doNothing() {
@@ -273,7 +292,15 @@ function sendNoSuchServer() {
 }
 
 function sendOnBadState() {
-	sc.a1a2()
+	let success = false
+	try {
+		sc.a1a2()
+	} catch (err) {
+		if (err.message === errorMsg) {
+			success = true
+		}
+	}
+	outcome(success, 'Expected error to be thrown')
 }
 
 function sendBadCharInP1() {
