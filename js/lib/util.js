@@ -1,4 +1,5 @@
-exports.hex2Uint8Arr = (str) => {
+// Takes a hex-string and returns a Uint8Array
+exports.hex2Uint8Array = (str) => {
     str = str.trim().toLowerCase()
     if (str.substring(0,2) === '0x') {
         str = str.substring(2, str.length)
@@ -22,6 +23,33 @@ exports.hex2Uint8Arr = (str) => {
     return new Uint8Array(arr)
 }
 
+// Takes a hex-string and returns an ArrayBuffer
+exports.hex2ab = (hex) => {
+	if (typeof hex !== 'string') {
+		throw new Error('Input must be string, was ' + typeof hex)
+	}
+	hex = hex.trim()
+	if (hex.length % 2 !== 0) {
+		throw new Error('String length must be even')
+	}
+	if (hex.substring(0,2) === '0x') {
+		hex = hex.substring(2, hex.length)
+	}
+
+	let arr = []
+	for (let i = 0; i < hex.length; i += 2) {
+		arr.push(parseInt(hex.substring(i, i+2), 16))
+	}
+	return new Uint8Array(arr).buffer
+}
+
+// Takes an ArrayBuffer and returns a hex-string
+exports.ab2hex = (buffer) => {
+    return Array.prototype.map.call(new Uint8Array(buffer),
+    		x => ('00' + x.toString(16)).slice(-2)).join('');
+}
+
+// Compares two Uint8Arrays for byte equality
 exports.uint8ArrayEquals = (uints1, uints2) => {
 	if (!(uints1 instanceof Uint8Array) ||
 		!(uints2 instanceof Uint8Array)) {
@@ -38,38 +66,7 @@ exports.uint8ArrayEquals = (uints1, uints2) => {
 	return true
 }
 
-exports.currentTimeMs = () => {
-	if (!Date.now) {
-		return new Date.getTime()
-	} else {
-		return Date.now()
-	}
-}
-
-exports.isString = (arg) => {
-	return typeof arg === "string" || arg instanceof String
-}
-
-exports.isArray = (arg) => {
-	if (!Array.isArray) {
-	    return Object.prototype.toString.call(arg) === '[object Array]'
-  	} else {
-  		return Array.isArray(arg)
-  	}
-}
-
-/**
- * Parameters:
- *		buffer1 	- an ArrayBuffer instance
- *		buffer2		- an ArrayBuffer instance
- *
- * Returns:
- *		true iff the two ArrayBuffers contains identical bytes
- *		false otherwise
- *
- * Throws error:
- *		if buffer1 and buffer2 are not ArrayBuffers
- */
+// Compares two ArrayBuffers for byte equality
 exports.bufferEquals = (buffer1, buffer2) => {
 	if (!(buffer1 instanceof ArrayBuffer) ||
 		!(buffer2 instanceof ArrayBuffer)) {
@@ -88,6 +85,27 @@ exports.bufferEquals = (buffer1, buffer2) => {
 	return true
 }
 
-exports.buf2hex = (buffer) => { // buffer is an ArrayBuffer
-	return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('')
+// Returns the number of ms since Unix epoch
+// Like Java's System.currentTimeMillis
+exports.currentTimeMs = () => {
+	if (!Date.now) {
+		return new Date.getTime()
+	} else {
+		return Date.now()
+	}
 }
+
+// Returns true iff arg is a string
+exports.isString = (arg) => {
+	return typeof arg === "string" || arg instanceof String
+}
+
+// Returns true iff arg is an array
+exports.isArray = (arg) => {
+	if (!Array.isArray) {
+	    return Object.prototype.toString.call(arg) === '[object Array]'
+  	} else {
+  		return Array.isArray(arg)
+  	}
+}
+

@@ -541,9 +541,10 @@ module.exports = (ws, thresh = 5000) => {
 
 	function handshakeComplete() {
 		saltState = STATE_READY
-		telemetry.handshake.end = util.currentTimeMs().toFixed(2) - 0
-		telemetry.handshake.total = (telemetry.handshake.end - telemetry.handshake.start)
-		telemetry.handshake.total = telemetry.handshake.total.toFixed(2) - 0
+		let end = util.currentTimeMs().toFixed(2) - 0
+		let start = telemetry.handshake.start
+
+		telemetry.handshake = end - start
 
 		if (typeof onHandshakeComplete === 'function') {
 			onHandshakeComplete()

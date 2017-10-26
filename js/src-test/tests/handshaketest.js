@@ -5,21 +5,21 @@ var nacl = require('./../../lib/nacl-fast.js')
 var util = require('./../../lib/util.js')
 
 let clientSecret =
-	util.hex2Uint8Arr('fd2956eb37782aabddc97eaf3b9e1b075f4976770db56c11e866e8763fa073d8' +
+	util.hex2Uint8Array('fd2956eb37782aabddc97eaf3b9e1b075f4976770db56c11e866e8763fa073d8' +
 						'9cace2ed6af2e108bbabc69c0bb7f3e62a4c0bf59ac2296811a09e480bf7b0f7')
 let clientSigKeyPair = nacl.sign.keyPair.fromSecretKey(clientSecret)
 let clientEphKeyPair = {
-	publicKey: util.hex2Uint8Arr('159205ede53fe5334eaf26f15f80710453b6600e6df5c96bfb85dd593c86cf4f'),
-	secretKey: util.hex2Uint8Arr('e9f639ffd6cc1c1edd5ba28e0aecbbe15ad88478dbfcebc09ad80300880a3fa2')
+	publicKey: util.hex2Uint8Array('159205ede53fe5334eaf26f15f80710453b6600e6df5c96bfb85dd593c86cf4f'),
+	secretKey: util.hex2Uint8Array('e9f639ffd6cc1c1edd5ba28e0aecbbe15ad88478dbfcebc09ad80300880a3fa2')
 	}
 
 let serverSecret =
-	util.hex2Uint8Arr('7a772fa9014b423300076a2ff646463952f141e2aa8d98263c690c0d72eed52d' +
+	util.hex2Uint8Array('7a772fa9014b423300076a2ff646463952f141e2aa8d98263c690c0d72eed52d' +
 						'07e28d4ee32bfdc4b07d41c92193c0c25ee6b3094c6296f373413b373d36168b')
 let serverSigKeyPair = nacl.sign.keyPair.fromSecretKey(serverSecret)
 let serverEphKeyPair = {
-	publicKey: util.hex2Uint8Arr('354200647ecfbcb1d5feeb7b2f59127fe1278ab4a632b505691f9a2f6a465065'),
-	secretKey: util.hex2Uint8Arr('942d5f9bb23b8380ce9a86ae52600ec675b922b64b1b294c8f94c44255a26fe0')
+	publicKey: util.hex2Uint8Array('354200647ecfbcb1d5feeb7b2f59127fe1278ab4a632b505691f9a2f6a465065'),
+	secretKey: util.hex2Uint8Array('942d5f9bb23b8380ce9a86ae52600ec675b922b64b1b294c8f94c44255a26fe0')
 	}
 
 let mockSocket = {}
@@ -431,7 +431,7 @@ function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey) {
 	sc.setOnHandshakeComplete(handshakeCompleteCb)
 	sc.setOnError(onError)
 	sc.setOnClose(doNothing)
-	
+
 	sc.handshake(clientSigKeyPair, clientEphKeyPair, sigKey)
 }
 

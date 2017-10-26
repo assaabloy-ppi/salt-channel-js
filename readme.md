@@ -178,13 +178,18 @@ The handshake method takes the client signing key pair, an ephemeral key pair an
 Sending Messages on the Salt Channel
 ------------------------------------
 
-When the onHandshakeComplete callback is executed you are free to send messages on the Salt Channel. The send method transparently support both AppPacket and MultiAppPacket. The send method takes a boolean value 'last' that specifies if this is the last message to be sent by this session, and either one or more Uint8Arrays or an array of Uint8Arrays. Therefore there are four different ways you can use the send method.
+When the onHandshakeComplete callback is executed you are free to send messages on the Salt Channel. The send method transparently support both AppPacket and MultiAppPacket. The send method takes a boolean value 'last' that specifies if this is the last message to be sent by this session, and either one or more Uint8Arrays or ArrayBuffers, or an array of Uint8Arrays or ArrayBuffers. Therefore there are four different ways you can use the send method.
 
+	let msg = getInterestingUint8Array()
 	sc.send(last, msg) 		// Sends an AppPacket with msg as data
 	sc.send(last, [msg])	// Logically equivalent to previous row
 
+	let msg1 = getInterestingUint8Array()
+	let msg2 = getInterestingArrayBuffer()
+	let msg3 = getInterestingUint8Array()
+	let arr = [msg1, msg2, msg3]
 	sc.send(last, msg1, msg2, msg3)		// Sends a MultiAppPacket with msg1, msg2, msg3 as data
-	sc.send(last, [msg1, msg2, msg3])	// Logically equivalent to previous row
+	sc.send(last, arr)	// Logically equivalent to previous row
 
 
 
@@ -192,15 +197,13 @@ When the onHandshakeComplete callback is executed you are free to send messages 
 Getting Telemetry Information
 -----------------------------
 
-The getTelemetry method returns an object with information about number of bytes sent and received, and the start, end and total time for the handshake execution.
+The getTelemetry method returns an object with information about number of bytes sent and received, and the time for the handshake execution from before creating and sending M1 until after sending M4.
 
 	let telemetry = sc.getTelemetry()
 
 	console.log(telemetry.bytes.sent)
 	console.log(telemetry.bytes.received)
-	console.log(telemetry.handshake.start)
-	console.log(telemetry.handshake.end)
-	console.log(telemetry.handshake.total)
+	console.log(telemetry.handshake)
 
 
 
