@@ -77,17 +77,17 @@ Download the source code and include using require.
 Method overview
 ---------------
 
-[saltchannel(ws [, threshold])](#initializing-a-salt-channel)
-[getState()](#the-state-of-the-salt-channel)
-[setOnA2Response(onA2Response)](#setting-functions-for-receiving-messages-from-salt-channel)
-[setOnError(onSaltChannelError)](#setting-functions-for-receiving-messages-from-salt-channel)
-[setOnHandshakeComplete(onHandshakeComplete)](#setting-functions-for-receiving-messages-from-salt-channel)
-[setOnMessage(onMessage)](#setting-functions-for-receiving-messages-from-salt-channel)
-[setOnClose(onClose)](#setting-functions-for-receiving-messages-from-salt-channel)
-[a1a2([adressType, adress])](#the-a1a2-session)
-[handshake(mySigKeyPair, myEphemeralKeyPair [, serverPublicSigKey])](#initiating-a-handshake)
-[send(last, msg)](#sending-messages-on-the-salt-channel)
-[getTelemetry()](#getting-telemetry-information)
+* [saltchannel(ws [, threshold])](#initializing-a-salt-channel)
+* [getState()](#the-state-of-the-salt-channel)
+* [setOnA2Response(onA2Response)](#setting-functions-for-receiving-messages-from-salt-channel)
+* [setOnError(onSaltChannelError)](#setting-functions-for-receiving-messages-from-salt-channel)
+* [setOnHandshakeComplete(onHandshakeComplete)](#setting-functions-for-receiving-messages-from-salt-channel)
+* [setOnMessage(onMessage)](#setting-functions-for-receiving-messages-from-salt-channel)
+* [setOnClose(onClose)](#setting-functions-for-receiving-messages-from-salt-channel)
+* [a1a2([adressType, adress])](#the-a1a2-session)
+* [handshake(mySigKeyPair, myEphemeralKeyPair [, serverPublicSigKey])](#initiating-a-handshake)
+* [send(last, msg)](#sending-messages-on-the-salt-channel)
+* [getTelemetry()](#getting-telemetry-information)
 
 
 
