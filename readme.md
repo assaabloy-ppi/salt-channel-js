@@ -36,6 +36,8 @@ WORK IN PROGRESS.
 Log Entries
 -----------
 
+2017-11-01, Felix, Fix of fatal bug regarding bit order of protocol specification. All prior versions affected.
+
 2017-10-25, Felix, saltchannel now passes ArrayBuffer on callback set with setOnMessage instead of Uint8Array.
 Improved and completely updated error handling.
 
