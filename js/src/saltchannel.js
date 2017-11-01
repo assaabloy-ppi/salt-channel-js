@@ -1,14 +1,16 @@
 var nacl = require('./../lib/nacl-fast.js')
 var util = require('./../lib/util.js')
+var getTimeKeeper = require('./time/typical-time-keeper.js')
+var getTimeChecker = require('./time/typical-time-checker.js')
+var getNullTimeChecker = require('./time/null-time-checker.js')
 
 /**
  * JavaScript implementation of Salt Channel v2
  *
  */
-module.exports = (ws, thresh = 5000) => {
+module.exports = (ws, timeKeeper, timeChecker) => {
 	'use-strict'
 
-	const THRESHOLD = thresh
 	const SIG_STR_1 = 'SC-SIG01'
 	const SIG_STR_2 = 'SC-SIG02'
 	const VERSION_STR = 'SCv2'
@@ -58,9 +60,8 @@ module.exports = (ws, thresh = 5000) => {
 	let signKeyPair
 	let ephemeralKeyPair
 
-	let timeSupported
-	let cEpoch
-	let sEpoch
+	timeKeeper = (timeKeeper) ? timeKeeper : getTimeKeeper(util.currentTimeMs)
+	timeChecker = (timeChecker) ? timeChecker : getTimeChecker(util.currentTimeMs)
 
 	let telemetry
 	let saltState
@@ -85,13 +86,12 @@ module.exports = (ws, thresh = 5000) => {
 		signKeyPair = undefined
 		ephemeralKeyPair = undefined
 
-		timeSupported = undefined
-		cEpoch = undefined
-		sEpoch = undefined
-
 		telemetry = undefined
 		let state = saltState
 		saltState = undefined
+
+		timeKeeper.reset()
+		timeChecker.reset()
 
 		init()
 
@@ -186,8 +186,8 @@ module.exports = (ws, thresh = 5000) => {
         	error('A2: NoSuchServer exception')
         	return
         }
-        if (!validHeader(a2, 9, 1)) {
-        	error('A2: Bad packet header. Expected 9 1, was ' +
+        if (!validHeader(a2, 9, 128)) {
+        	error('A2: Bad packet header. Expected 9 128, was ' +
         		a2[0] + ' ' + a2[1])
         	return
         }
@@ -326,17 +326,17 @@ module.exports = (ws, thresh = 5000) => {
 	}
 
 	function sendM1() {
-		let m1Len = (hostPub === undefined) ? 42 : 74
+		let m1Len = (hostPub) ? 74 : 42
 		let m1 = new Uint8Array(m1Len)
 
 		m1.set(VERSION)
 
 		// Header
 		m1[4] = 1	// Packet type 1
-		m1[5] = (hostPub === undefined) ? 0 : 128
+		m1[5] = (hostPub) ? 1 : 0
 
 		// Time
-		setInt32(m1, 1, 6)
+		setInt32(m1, timeKeeper.getTime(), 6)
 
 		// ClientEncKey
 		m1.set(ephemeralKeyPair.publicKey, 10)
@@ -350,8 +350,6 @@ module.exports = (ws, thresh = 5000) => {
 		ws.onmessage = function(evt) {
 			handleM2(evt.data)
 		}
-
-		cEpoch = util.currentTimeMs()
 
 		sendOnWs(m1.buffer)
 	}
@@ -381,13 +379,9 @@ module.exports = (ws, thresh = 5000) => {
 
 		// Time
 		let time = getInt32(m2, 2)
-		if (time === 1) {
-			// Time supported by server
-			sEpoch = util.currentTimeMs()
-			timeSupported = true
-		} else if (time === 0){
-			timeSupported = false
-		} else {
+		if (time === 0) {
+			timeChecker = getNullTimeChecker()
+		} else if (time !== 1){
 			error('M2: Invalid time value ' + time)
 			return
 		}
@@ -425,7 +419,8 @@ module.exports = (ws, thresh = 5000) => {
 		}
 
 		// Time
-		if (delayed(m3, 2)) {
+		let time = getInt32(m3, 2)
+		if (timeChecker.delayed(time)) {
 			error('M3: Detected delayed packet')
 			return
 		}
@@ -479,9 +474,7 @@ module.exports = (ws, thresh = 5000) => {
 
 		m4.set(signature, 38)
 
-		if (timeSupported) {
-			setInt32(m4, cEpoch - util.currentTimeMs(), 2)
-		}
+		setInt32(m4, timeKeeper.getTime(), 2)
 
 		let encrypted = encrypt(false, m4)
 
@@ -568,7 +561,8 @@ module.exports = (ws, thresh = 5000) => {
 			return
 		}
 
-		if (delayed(clear, 2)) {
+		let time = getInt32(clear, 2)
+		if (timeChecker.delayed(time)) {
 			error('(Multi)AppPacket: Detected a delayed packet')
 			return
 		}
@@ -633,11 +627,11 @@ module.exports = (ws, thresh = 5000) => {
 	function decrypt(message) {
 		if (validHeader(message, 6, 0)) {
 			// Regular message
-		} else if (validHeader(message, 6, 1)) {
+		} else if (validHeader(message, 6, 128)) {
 			// Last message
 			saltState = STATE_LAST;
 		} else {
-			error('EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was '
+			error('EncryptedMessage: Bad packet header. Expected 6 0 or 6 128, was '
 				+ message[0] + ' ' + message[1])
 			return null
 		}
@@ -668,16 +662,6 @@ module.exports = (ws, thresh = 5000) => {
 			return false
 		}
 		return true
-	}
-
-	function delayed(uints, offset) {
-		if (timeSupported) {
-			let time = getInt32(uints, offset)
-			let expectedTime = util.currentTimeMs() - cEpoch
-			return expectedTime > time + THRESHOLD
-		}
-
-		return false
 	}
 
 	function getUints(from, length, offset = 0) {
@@ -762,9 +746,7 @@ module.exports = (ws, thresh = 5000) => {
 		appPacket[0] = 5
 		appPacket.set(data, 6)
 
-		if (timeSupported) {
-			setInt32(appPacket, cEpoch - util.currentTimeMs(), 2)
-		}
+		setInt32(appPacket, timeKeeper.getTime(), 2)
 
 		let encrypted = encrypt(last, appPacket)
 		sendOnWs(encrypted.buffer)
@@ -799,9 +781,7 @@ module.exports = (ws, thresh = 5000) => {
 			offset += arr[i].length + 2
 		}
 
-		if (timeSupported) {
-			setInt32(multiAppPacket, cEpoch - util.currentTimeMs(), 2)
-		}
+		setInt32(multiAppPacket, timeKeeper.getTime(), 2)
 
 		let encrypted = encrypt(last, multiAppPacket)
 		sendOnWs(encrypted.buffer)
@@ -819,7 +799,7 @@ module.exports = (ws, thresh = 5000) => {
 
 		let encryptedMessage = new Uint8Array(body.length + 2)
 		encryptedMessage[0] = 6
-		encryptedMessage[1] = last ? 1 : 0
+		encryptedMessage[1] = last ? 128 : 0
 		encryptedMessage.set(body, 2)
 
 		return encryptedMessage

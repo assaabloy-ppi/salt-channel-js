@@ -3,7 +3,7 @@ var util = require('./../../lib/util.js')
 var nacl = require('./../../lib/nacl-fast.js')
 
 let serverSecret =
-	util.hex2Uint8Arr('7a772fa9014b423300076a2ff646463952f141e2aa8d98263c690c0d72eed52d' +
+	util.hex2Uint8Array('7a772fa9014b423300076a2ff646463952f141e2aa8d98263c690c0d72eed52d' +
 						'07e28d4ee32bfdc4b07d41c92193c0c25ee6b3094c6296f373413b373d36168b')
 let serverSigKeyPair = nacl.sign.keyPair.fromSecretKey(serverSecret)
 
@@ -17,7 +17,7 @@ let testCount = 0
 
 let expectedProtCount
 let byteZero = 9
-let byteOne = 1
+let byteOne = 128
 let badLength
 let badByte
 let errorMsg
@@ -47,11 +47,11 @@ exports.run = () => {
 	runTest(sendBadPacketLength)
 
 	currentTest = 'badPacketHeader1'
-	errorMsg = 'A2: Bad packet header. Expected 9 1, was 0 1'
+	errorMsg = 'A2: Bad packet header. Expected 9 128, was 0 128'
 	runTest(sendBadPacketHeader1)
 
 	currentTest = 'badPacketHeader2'
-	errorMsg = 'A2: Bad packet header. Expected 9 1, was 9 0'
+	errorMsg = 'A2: Bad packet header. Expected 9 128, was 9 0'
 	runTest(sendBadPacketHeader2)
 
 	mockSocket.send = validateA1Pub

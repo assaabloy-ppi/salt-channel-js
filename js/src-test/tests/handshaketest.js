@@ -3,6 +3,10 @@
 var saltChannelSession = require('./../../src/saltchannel.js')
 var nacl = require('./../../lib/nacl-fast.js')
 var util = require('./../../lib/util.js')
+var timeKeeperMaker = require('./../../src/time/typical-time-keeper.js')
+var timeCheckerMaker = require('./../../src/time/typical-time-checker.js')
+var nullTimeCheckerMaker = require('./../../src/time/null-time-checker.js')
+
 
 let clientSecret =
 	util.hex2Uint8Array('fd2956eb37782aabddc97eaf3b9e1b075f4976770db56c11e866e8763fa073d8' +
@@ -23,6 +27,7 @@ let serverEphKeyPair = {
 	}
 
 let mockSocket = {}
+
 let sessionKey
 let eNonce
 let dNonce
@@ -64,6 +69,9 @@ let testCount = 0
 let multiAppPacketCount
 let mutliAppPacketFailed
 let lastFlag
+
+let timeKeeper
+let timeChecker
 
 
 exports.run = () => {
@@ -240,9 +248,11 @@ function testReceiveDelayed() {
 	errorMsg = '(Multi)AppPacket: Detected a delayed packet'
 
 	threshold = 20
+	timeChecker = timeCheckerMaker(util.currentTimeMs, 10)
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
 
 	receiveDelayedPacket()
+	timeChecker = undefined
 	threshold = undefined
 }
 
@@ -299,7 +309,7 @@ function testWithBadServSigKey() {
 function testReceiveBadHeaderEnc1() {
 	currentTest = 'receiveBadHeaderEnc1'
 	testCount++
-	errorMsg = 'EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was 1 0'
+	errorMsg = 'EncryptedMessage: Bad packet header. Expected 6 0 or 6 128, was 1 0'
 	badData = new Uint8Array([1, 0])
 
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
@@ -309,7 +319,7 @@ function testReceiveBadHeaderEnc1() {
 function testReceiveBadHeaderEnc2() {
 	currentTest = 'receiveBadHeaderEnc2'
 	testCount++
-	errorMsg = 'EncryptedMessage: Bad packet header. Expected 6 0 or 6 1, was 6 2'
+	errorMsg = 'EncryptedMessage: Bad packet header. Expected 6 0 or 6 128, was 6 2'
 	badData = new Uint8Array([6, 2])
 
 	newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
@@ -427,7 +437,7 @@ function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey) {
 
 	mockSocket.send = validateM1
 
-	sc = saltChannelSession(mockSocket, threshold)
+	sc = saltChannelSession(mockSocket, timeKeeper, timeChecker)
 	sc.setOnHandshakeComplete(handshakeCompleteCb)
 	sc.setOnError(onError)
 	sc.setOnClose(doNothing)
@@ -696,6 +706,7 @@ function validateM1NoServSigKey(message) {
 
 	if (!(m1[6] === 1 && m1[7] === 0 &&
 		m1[8] === 0 && m1[9] === 0)) {
+		console.log(util.ab2hex(m1.buffer))
 		outcome(false, '  M1: Expected time to be set')
 		return
 	}
@@ -743,8 +754,8 @@ function validateM1WithServSigKey(message) {
 		return
 	}
 
-	if(bytes[5] !== 128) {
-		outcome(false, '  Unexpected server sig key included, expected 128, was ' + bytes[5])
+	if(bytes[5] !== 1) {
+		outcome(false, '  Unexpected server sig key included, expected 1, was ' + bytes[5])
 		return
 	}
 
@@ -803,8 +814,8 @@ function validateM1BadServSigKey(message) {
 		return
 	}
 
-	if(bytes[5] !== 128) {
-		outcome(false, '  Unexpected server sig key included, expected 128, was ' + bytes[5])
+	if(bytes[5] !== 1) {
+		outcome(false, '  Unexpected server sig key included, expected 1, was ' + bytes[5])
 		return
 	}
 
@@ -1032,7 +1043,7 @@ function validateM4(message) {
 function decrypt(message) {
 	if (message[0] === 6 && message[1] === 0) {
 
-	} else if (message[0] === 6 && message[1] === 1) {
+	} else if (message[0] === 6 && message[1] === 128) {
 		lastFlag = true
 	} else {
 		return '  EncryptedMessage: Bad packet header, was  ' +
@@ -1066,7 +1077,7 @@ function encrypt(clearBytes, last = false) {
 
 	let encryptedMessage = new Uint8Array(body.length + 2)
 	encryptedMessage[0] = 6
-	encryptedMessage[1] = last ? 1 : 0
+	encryptedMessage[1] = last ? 128 : 0
 
 	for (let i = 0; i < body.length; i++) {
 		encryptedMessage[2+i] = body[i]

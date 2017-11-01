@@ -13,6 +13,8 @@ Table of Contents
 * [Usage](#usage)
   * [Method overview](#method-overview)
   * [Initializing a Salt Channel](#initializing-a-salt-channel)
+  * [Time keeping](#time-keeping)
+  * [Time checking](#time-checking)
   * [Setting Functions for Receiving Messages from Salt Channel](#setting-functions-for-receiving-messages-from-salt-channel)
   * [The State of the Salt Channel](#the-state-of-the-salt-channel)
   * [The A1A2 Session](#the-a1a2-session)
@@ -91,12 +93,77 @@ Method overview
 Initializing a Salt Channel
 ---------------------------
 
-Salt Channel initialization requires a WebSocket and an optional threshold value. The threshold value specifies the tolerance for delayed packets in milliseconds. The higher the threshold value, the more a packet can be delayed without detection. The default value is 5000 ms.
+Salt Channel initialization requires a WebSocket, optionally a time keeper and a time checker can be supplied, if omitted a default time keeper and checker will be used. If the peer does not support time stamping the null time checker is always used. The folder js/src/time contains two implementations each of time keeper and time checker, section [Time keeping](#time-keeping) and [Time checking](#time-checking) documents how to use them. A Salt Channel session can therefore be initialized in the following ways:
 
-	let sc = saltchannel(ws [, threshold])
+	let sc
+	// Like this with just a WebSocket
+	sc = saltchannel(ws)
+	// Or with a WebSocket and a time checker
+	sc = saltchannel(ws, timeChecker)
+	// Or with a WebSocket, time checker and a time keeper
+	sc = saltchannel(ws, timeChecker, timeKeeper)
+	// Or with a WebSocket and time keeper, and the second argument as undefined or null
+	sc = saltchannel(ws, undefined, timeKeeper)
 
 
 
+
+Time keeping
+------------
+
+The time keeper is used to compute the relative time since the first message was sent. A time keeper must have two methods, *getTime* and *reset*. The folder js/src/time contains a null and typical time keeper. The null time keeper's getTime method always returns 0 and is intentended for when you do not want to use time stamping.
+
+	let timeKeeperMaker = require('/path/to/null-time-keeper.js')
+	let timeKeeper = timeKeeperMaker()
+	timeKeeper.getTime() // always 0
+
+The typical time keeper requires a function that returns the current time in milliseconds. The typical time keeper's getTime method returns 1 the first time, and the relative time, according to the supplied function, since the first getTime invocation on every subsequent invocation of the getTime method.
+
+	let timeKeeperMaker = require('/path/to/typical-time-keeper.js')
+
+	// create a new time keeper using Date.now to keep time
+	let timeKeeper = timeKeeperMaker(Date.now)
+	timeKeeper.getTime() // always 1
+	doWork()
+	timeKeeper.getTime() // > 1
+
+The reset method makes it possible to reuse the same time keeper by putting the time keeper into a state that matches that of a newly created time keeper, before the first getTime invocation. Thus it is possible to reuse the same time keeper for multiple consecutive Salt Channel sessions.
+
+	// create a new time keeper using Date.now to keep time
+	let timeKeeper = timeKeeperMaker(Date.now)
+	timeKeeper.getTime() // always 1
+	doWork()
+	timeKeeper.getTime() // > 1
+	timeKeeper.reset()
+	timeKeeper.getTime() // always 1 because reset was called
+
+
+Time checking
+-------------
+
+The time checker is used to decide if a packet has been delayed. A time checker must have two methods, *delayed* and *reset*. The folder js/src/time contains a null and typical time checker. The null time checker's delayed method always returns false and is intended for when the peer does not support time stamping.
+
+	let timeCheckerMaker = require('/path/to/null-time-checker.js')
+	let timeChecker = timeCheckerMaker()
+	timeChecker.delayed() // always false
+
+The typical time checker requires a function that returns the current time in milliseconds, and optionally a threshold value for what is considered a delayed packet, a time in milliseconds. If the threshold argument is omitted 5000 milliseconds is used. The typical time checker's delayed method always returns false on the first invocation. On subsequent invocation it returns true if the expected value of the time value exceeds the supplied value plus the threshold, otherwise false.
+
+	let timeCheckerMaker = require('/path/to/typical-time-checker.js')
+	let timeChecker = timeCheckerMaker(Date.now, 1000)
+	timeChecker.delayed(1) 	// false
+	spinForTwoSeconds()
+	timeChecker.delayed(2) // true because expected time > time + threshold
+
+The reset method makes it possible to reuse the same time checker by putting it into a state that matches that of a newly created time checker, before the first delayed invocation. Thus it is possible to reuse the same time checker for multiple consecutive Salt Channel sessions.
+
+	let timeCheckerMaker = require('/path/to/typical-time-checker.js')
+	let timeChecker = timeCheckerMaker(Date.now, 1000)
+	timeChecker.delayed(1) 	// always false
+	spinForTwoSeconds()
+	timeChecker.delayed(2) // true because expected time > time + threshold
+	timeChecker.reset()
+	timeChecker.delayed(1) // false
 
 The State of The Salt Channel
 -----------------------------
