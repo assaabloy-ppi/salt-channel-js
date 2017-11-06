@@ -87,7 +87,7 @@ Method overview
 * [a1a2([adressType, adress])](#the-a1a2-session)
 * [handshake(mySigKeyPair, myEphemeralKeyPair [, serverPublicSigKey])](#initiating-a-handshake)
 * [send(last, msg1[, msg2, ...])](#sending-messages-on-the-salt-channel)
-* [send(last, array)(#sending-messages-on-the-salt-channel)
+* [send(last, array)](#sending-messages-on-the-salt-channel)
 * [getTelemetry()](#getting-telemetry-information)
 
 
