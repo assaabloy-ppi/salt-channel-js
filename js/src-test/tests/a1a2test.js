@@ -565,7 +565,7 @@ function onError(err) {
 
 function stateAfterA1A2() {
 	testCount++
-	if (sc.getState() === 'init') {
+	if (sc.getState() === 'closed') {
 		outcome(true)
 	} else {
 		outcome(false, '  Invalid state after A1A2: ' + sc.getState())

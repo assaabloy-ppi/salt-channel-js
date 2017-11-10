@@ -21,6 +21,7 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 	const STATE_READY = 'ready'
 	const STATE_LAST = 'last'
 	const STATE_ERR = 'error'
+	const STATE_CLOSED = 'closed'
 
 	const ADDR_TYPE_ANY = 0
 	const ADDR_TYPE_PUB = 1
@@ -75,7 +76,7 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 
 	init()
 
-	function reset() {
+	function close() {
 		eNonce = undefined
 		dNonce = undefined
 		m1Hash = undefined
@@ -88,12 +89,10 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 
 		telemetry = undefined
 		let state = saltState
-		saltState = undefined
+		saltState = STATE_CLOSED
 
 		timeKeeper.reset()
 		timeChecker.reset()
-
-		init()
 
 		if (typeof onclose === 'function') {
 			onclose(state)
@@ -239,8 +238,7 @@ module.exports = (ws, timeKeeper, timeChecker) => {
         	console.error('saltchannel.onA2Response not set')
         }
 
-        // Do a hard reset and put session in init state
-        reset()
+        close()
     }
 
     function validPStringChar(byteValue) {
@@ -528,8 +526,7 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 			console.error(new Error(msg))
 		}
 
-		// Do a hard reset and put session in init state
-		reset()
+		close()
 	}
 
 	function handshakeComplete() {
@@ -577,7 +574,7 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 			return
 		}
 		if (saltState === STATE_LAST) {
-			reset()
+			close()
 		}
 	}
 
@@ -730,7 +727,7 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 		}
 
 		if (saltState === STATE_LAST) {
-			reset()
+			close()
 		}
 	}
 
