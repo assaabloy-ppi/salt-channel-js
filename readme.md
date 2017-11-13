@@ -36,6 +36,8 @@ WORK IN PROGRESS.
 Log Entries
 -----------
 
+2017-11-13, Felix, Implementation now closes the WebSocket when a session ends
+
 2017-11-10, Felix, Implementation no longer supports sequential sessions over the same WebSocket session. Because reference implementation in Java does not support this, which may cause confusion when using Salt Channel JS.
 
 2017-11-01, Felix, Fix of fatal bug regarding bit order of protocol specification. All prior versions affected.
@@ -63,7 +65,7 @@ was created in dir java/. Did not move real JavaScript implementation yet.
 Dependencies
 ============
 
-Salt Channel is based on [TweetNaCl](http://tweetnacl.cr.yp.to/) and SaltChannel.js uses [TweetNaCl.js](https://tweetnacl.js.org/#/) which has no dependencies.
+Salt Channel is based on [TweetNaCl](http://tweetnacl.cr.yp.to/) and SaltChannel.js uses [TweetNaCl.js](https://tweetnacl.js.org/) which has no dependencies.
 
 
 
@@ -212,7 +214,8 @@ A Salt Channel can be in five different states:
 4. 'ready' - After handshake execution. Only state where it is possible to send or receive messages.
 5. 'last' - From when a LastFlag has been read or set until the message has been dispatched to the callback or sent on the WebSocket. After 'last' the Salt Channel enters the 'closed' state.
 6. 'error' - During onError callback. After 'error' the Salt Channel enters the 'closed' state.
-7. 'closed' - After an error has occurred or when a packet with LastFlag set has been sent or received. A Salt Channel that has entered the 'closed' state remains in the 'closed' state.
+7. 'closed' - After an error has occurred, when a packet with LastFlag set has been sent or received, or if the WebSocket is the 'closed' or 'closing' states. A Salt Channel that has entered the 'closed' state remains in the 'closed' state.
+8. 'waiting' - If the WebSocket is in the 'connecting' state.
 
 To get the current state of Salt Channel:
 
@@ -345,12 +348,9 @@ listens for message events, the code that uses Salt Channel must
 handle all other necessary events.
 
 If a fatal error occurs the callback set by the *setOnError*-method
-is executed and the Salt Channel is put into the 'closed' state. It
-is recommended that the user of the Salt Channel closes the WebSocket
-when the onError callback is executed, because the Salt Channel is
-closed without notifying the peer. Because the peer is not notified
-it may send additional messages, which when they arrive causes the
-onError callback to be executed.
+is executed and the Salt Channel is put into the 'closed' state. To
+avoid further errors the underlying WebSocket is closed by the Salt
+Channel.
 
 **sc.a1a2(adressType, adress)**
 * Throws Error if Salt Channel is not in the 'init' state.
@@ -385,9 +385,8 @@ Code Example With WebSocket
 
     let ws = new WebSocket(uri)
     ws.binaryType = "arraybuffer"
-    let threshold = 1000
 
-    let sc = SaltChannel(ws, threshold)
+    let sc = SaltChannel(ws)
     sc.setOnA2Response(onA2Response)
     sc.setOnError(onSaltChannelError)
     sc.setOnHandshakeComplete(onHandshakeComplete)
@@ -405,7 +404,6 @@ Code Example With WebSocket
     function onSaltChannelError(err) {
         // err is an Error object
         // err.message is always set
-        ws.close() // So that no more messages arrive on a closed Salt Channel
     }
 
     function onHandshakeComplete() {

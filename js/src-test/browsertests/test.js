@@ -43,7 +43,7 @@ function newSaltChannel(test) {
 
 function newWebSocket(test) {
   ws = new WebSocket('ws:localhost:2034')
-  ws.binaryType = "arraybuffer"
+  ws.binaryType = 'arraybuffer'
 
   ws.onopen = function(evt) {
     switch (test) {

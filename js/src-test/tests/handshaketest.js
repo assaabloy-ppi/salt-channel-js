@@ -26,7 +26,14 @@ let serverEphKeyPair = {
     secretKey: util.hex2Uint8Array('942d5f9bb23b8380ce9a86ae52600ec675b922b64b1b294c8f94c44255a26fe0')
     }
 
-let mockSocket = {}
+let mockSocket = {
+    close: closeMockSocket,
+    readyState: 1
+}
+
+function closeMockSocket() {
+    mockSocket.readyState = 3
+}
 
 let sessionKey
 let eNonce
@@ -436,6 +443,7 @@ function newSaltChannelAndHandshake(handshakeCompleteCb, validateM1, sigKey) {
     lastFlag = false
 
     mockSocket.send = validateM1
+    mockSocket.readyState = 1
 
     sc = saltChannelSession(mockSocket, timeKeeper, timeChecker)
     sc.setOnHandshakeComplete(handshakeCompleteCb)
@@ -472,7 +480,7 @@ function verifyReady() {
     if (sc.getState() === 'ready') {
         outcome(true)
     } else {
-        outcome(false, 'Status: ' + sc.getStatus)
+        outcome(false, 'Status: ' + sc.getState())
     }
 }
 
@@ -502,7 +510,7 @@ function onError(err) {
 
 function sendAppPacket1() {
     if (sc.getState() !== 'ready') {
-        outcome(false, 'Status: ' + sc.getStatus)
+        outcome(false, 'Status: ' + sc.getState())
         return;
     }
     sc.send(false, new Uint8Array([0]).buffer)
@@ -510,7 +518,7 @@ function sendAppPacket1() {
 
 function sendAppPacket2() {
     if (sc.getState() !== 'ready') {
-        outcome(false, 'Status: ' + sc.getStatus)
+        outcome(false, 'Status: ' + sc.getState())
         return;
     }
     sc.send(false, [new Uint8Array([0])])
@@ -549,7 +557,7 @@ function receiveZeroByte(message) {
 
 function sendMultiAppPacket1() {
     if (sc.getState() !== 'ready') {
-        outcome(false, 'Status: ' + sc.getStatus)
+        outcome(false, 'Status: ' + sc.getState())
         return;
     }
     sc.send(false, [new Uint8Array([0]).buffer, new Uint8Array([1])])
@@ -557,7 +565,7 @@ function sendMultiAppPacket1() {
 
 function sendMultiAppPacket2() {
     if (sc.getState() !== 'ready') {
-        outcome(false, 'Status: ' + sc.getStatus)
+        outcome(false, 'Status: ' + sc.getState())
         return;
     }
     sc.send(false, new Uint8Array([0]), new Uint8Array([1]).buffer)
@@ -605,7 +613,7 @@ function receiveTwoAppPacketData(message) {
 
 function receiveBadEncryption() {
     if (sc.getState() !== 'ready') {
-        outcome(false, 'Status: ' + sc.getStatus())
+        outcome(false, 'Status: ' + sc.getState())
         return;
     }
 
@@ -628,7 +636,7 @@ function receiveBadEncryption() {
 
 function receiveDelayedPacket() {
     if (sc.getState() !== 'ready') {
-        outcome(false, 'Status: ' + sc.getStatus)
+        outcome(false, 'Status: ' + sc.getState())
         return;
     }
 
@@ -652,7 +660,7 @@ function receiveLastFlag() {
 
 function sendLastFlag() {
     if (sc.getState() !== 'ready') {
-        outcome(false, 'Status: ' + sc.getStatus())
+        outcome(false, 'Status: ' + sc.getState())
         return
     }
     sc.send(true, new Uint8Array(1));

@@ -7,7 +7,15 @@ let serverSecret =
 						'07e28d4ee32bfdc4b07d41c92193c0c25ee6b3094c6296f373413b373d36168b')
 let serverSigKeyPair = nacl.sign.keyPair.fromSecretKey(serverSecret)
 
-let mockSocket = {}
+let mockSocket = {
+	close: closeMockSocket,
+	readyState: 1
+}
+
+function closeMockSocket() {
+	mockSocket.readyState = 3
+}
+
 let sendA2
 let sc
 
@@ -97,6 +105,7 @@ exports.run = () => {
 function runTest(send, adressType, adress) {
 	testCount++
 	sendA2 = send
+	mockSocket.readyState = 1
 
 	sc = saltChannelSession(mockSocket)
 	sc.setOnA2Response(onA2Response)

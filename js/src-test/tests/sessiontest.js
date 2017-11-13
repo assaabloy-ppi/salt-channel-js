@@ -67,7 +67,15 @@ let passCount = 0
 let testCount = 0
 let currentTest
 
-let mockSocket = {}
+let mockSocket = {
+	close: closeMockSocket,
+    readyState: 1
+}
+
+function closeMockSocket() {
+    mockSocket.readyState = 3
+}
+
 let sc
 let time
 let timeKeeper
@@ -96,6 +104,7 @@ function session1() {
 	testCount++
 
 	mockSocket.send = session1M1
+	mockSocket.readyState = 1
 
 	time = 0
 	timeKeeper = getNullTimeKeeper()
@@ -126,7 +135,7 @@ function session1M4(message) {
 }
 function session1HandshakeComplete() {
 	if (sc.getState() !== 'ready') {
-		outcome(false, 'Bad status: ' + sc.getStatus)
+		outcome(false, 'Bad status: ' + sc.getState())
 		return
 	}
 	mockSocket.send = session1App
@@ -158,6 +167,7 @@ function session2() {
 	testCount++
 
 	mockSocket.send = session2A1
+	mockSocket.readyState = 1
 
 	sc = saltChannelSession(mockSocket)
 	sc.setOnA2Response(session2A2)
@@ -208,6 +218,7 @@ function session3() {
 	testCount++
 
 	mockSocket.send = session3M1
+	mockSocket.readyState = 1
 
 	time = 0
 	timeKeeper = getTimeKeeper(getTime)
@@ -238,7 +249,7 @@ function session3M4(message) {
 }
 function session3HandshakeComplete() {
 	if (sc.getState() !== 'ready') {
-		outcome(false, 'Bad status: ' + sc.getStatus)
+		outcome(false, 'Bad status: ' + sc.getState())
 		return
 	}
 
@@ -297,6 +308,7 @@ function session4() {
 	testCount++
 
 	mockSocket.send = session4M1
+	mockSocket.readyState = 1
 
 	time = 0
 	timeKeeper = getNullTimeKeeper()
@@ -327,7 +339,7 @@ function session4M4(message) {
 }
 function session4HandshakeComplete() {
 	if (sc.getState() !== 'ready') {
-		outcome(false, 'Bad status: ' + sc.getStatus)
+		outcome(false, 'Bad status: ' + sc.getState())
 		return
 	}
 	mockSocket.send = session4App

@@ -2536,7 +2536,7 @@ function newSaltChannel(test) {
 
 function newWebSocket(test) {
   ws = new WebSocket('ws:localhost:2034')
-  ws.binaryType = "arraybuffer"
+  ws.binaryType = 'arraybuffer'
 
   ws.onopen = function(evt) {
     switch (test) {
@@ -2661,9 +2661,15 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 	const STATE_LAST = 'last'
 	const STATE_ERR = 'error'
 	const STATE_CLOSED = 'closed'
+	const STATE_WAITING = 'waiting'
 
 	const ADDR_TYPE_ANY = 0
 	const ADDR_TYPE_PUB = 1
+
+	const WS_CONNECTING = 0
+	const WS_OPEN = 1
+	const WS_CLOSING = 2
+	const WS_CLOSED = 3
 
 	const SIG_STR1_BYTES = new Uint8Array([ SIG_STR_1.charCodeAt(0)
 							, SIG_STR_1.charCodeAt(1)
@@ -2732,6 +2738,8 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 
 		timeKeeper.reset()
 		timeChecker.reset()
+
+		ws.close()
 
 		if (typeof onclose === 'function') {
 			onclose(state)
@@ -2877,7 +2885,6 @@ module.exports = (ws, timeKeeper, timeChecker) => {
         	console.error('saltchannel.onA2Response not set')
         }
 
-        // Close salt channel session
         close()
     }
 
@@ -2988,6 +2995,7 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 		ws.onmessage = function(evt) {
 			handleM2(evt.data)
 		}
+
 		sendOnWs(m1.buffer)
 	}
 
@@ -3120,6 +3128,7 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 		ws.onmessage = function(evt) {
 			onmsg(evt.data)
 		}
+
 		handshakeComplete()
 	}
 
@@ -3152,7 +3161,15 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 	}
 
 	function getState() {
-		return saltState
+		switch (ws.readyState) {
+			case WS_OPEN:
+				return saltState
+			case WS_CLOSED:
+			case WS_CLOSING:
+				return STATE_CLOSED
+			case WS_CONNECTING:
+				return STATE_WAITING
+		}
 	}
 
 	function error(msg) {
@@ -3264,7 +3281,6 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 			// Regular message
 		} else if (validHeader(message, 6, 128)) {
 			// Last message
-			console.log("LastFlag!")
 			saltState = STATE_LAST;
 		} else {
 			error('EncryptedMessage: Bad packet header. Expected 6 0 or 6 128, was '

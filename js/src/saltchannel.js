@@ -22,9 +22,15 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 	const STATE_LAST = 'last'
 	const STATE_ERR = 'error'
 	const STATE_CLOSED = 'closed'
+	const STATE_WAITING = 'waiting'
 
 	const ADDR_TYPE_ANY = 0
 	const ADDR_TYPE_PUB = 1
+
+	const WS_CONNECTING = 0
+	const WS_OPEN = 1
+	const WS_CLOSING = 2
+	const WS_CLOSED = 3
 
 	const SIG_STR1_BYTES = new Uint8Array([ SIG_STR_1.charCodeAt(0)
 							, SIG_STR_1.charCodeAt(1)
@@ -93,6 +99,8 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 
 		timeKeeper.reset()
 		timeChecker.reset()
+
+		ws.close()
 
 		if (typeof onclose === 'function') {
 			onclose(state)
@@ -514,7 +522,15 @@ module.exports = (ws, timeKeeper, timeChecker) => {
 	}
 
 	function getState() {
-		return saltState
+		switch (ws.readyState) {
+			case WS_OPEN:
+				return saltState
+			case WS_CLOSED:
+			case WS_CLOSING:
+				return STATE_CLOSED
+			case WS_CONNECTING:
+				return STATE_WAITING
+		}
 	}
 
 	function error(msg) {
