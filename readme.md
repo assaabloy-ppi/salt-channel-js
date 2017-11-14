@@ -412,7 +412,7 @@ Code Example With WebSocket
     }
 
     function onMessage(message) {
-        // message is a Uint8Array that was sent
+        // message is an ArrayBuffer that was sent
         // from the server
     }
 
