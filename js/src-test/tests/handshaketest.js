@@ -1,12 +1,8 @@
-'use-strict'
+import saltChannelSession from './../../src/saltchannel.js';
+import * as util from './../../lib/util.js';
+import getTimeChecker from './../../src/time/typical-time-checker.js';
 
-var saltChannelSession = require('./../../src/saltchannel.js')
-var nacl = require('./../../lib/nacl-fast.js')
-var util = require('./../../lib/util.js')
-var timeKeeperMaker = require('./../../src/time/typical-time-keeper.js')
-var timeCheckerMaker = require('./../../src/time/typical-time-checker.js')
-var nullTimeCheckerMaker = require('./../../src/time/null-time-checker.js')
-
+const nacl = require('./../../lib/nacl-fast.js')
 
 let clientSecret =
     util.hex2Uint8Array('fd2956eb37782aabddc97eaf3b9e1b075f4976770db56c11e866e8763fa073d8' +
@@ -74,7 +70,7 @@ let m4Delayed
 let passCount = 0
 let testCount = 0
 let multiAppPacketCount
-let mutliAppPacketFailed
+let multiAppPacketFailed
 let lastFlag
 
 let timeKeeper
@@ -255,7 +251,7 @@ function testReceiveDelayed() {
     errorMsg = '(Multi)AppPacket: Detected a delayed packet'
 
     threshold = 20
-    timeChecker = timeCheckerMaker(util.currentTimeMs, 10)
+    timeChecker = getTimeChecker(util.currentTimeMs, 10)
     newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
 
     receiveDelayedPacket()

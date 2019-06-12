@@ -1,5 +1,5 @@
 
-module.exports = () => {
+export default () => {
 
 	function delayed() {
 		return false

@@ -1,4 +1,4 @@
-module.exports = () => {
+export default () => {
 
 	function getTime() {
 		return 0
