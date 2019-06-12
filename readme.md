@@ -36,7 +36,9 @@ WORK IN PROGRESS.
 Log Entries
 -----------
 
-2017-11-13, Felix, Implementation now closes the WebSocket when a session ends
+2019-06-12, Jakub, Converted from CommonJS into ES6 module.
+
+2017-11-13, Felix, Implementation now closes the WebSocket when a session ends.
 
 2017-11-10, Felix, Implementation no longer supports sequential sessions over the same WebSocket session. Because reference implementation in Java does not support this, which may cause confusion when using Salt Channel JS.
 
@@ -72,9 +74,9 @@ Salt Channel is based on [TweetNaCl](http://tweetnacl.cr.yp.to/) and SaltChannel
 Usage
 =====
 
-Download the source code and include using require.
+Download the source code and include using import.
 
-    let saltchannel = require('path/to/saltchannel.js')
+    import saltchannel from 'path/to/saltchannel.js';
 
 
 
@@ -129,9 +131,10 @@ The time keeper is used to compute the relative time since the first
 message was sent. A time keeper must have two methods, *getTime* and
 *reset*. The folder js/src/time contains a null and typical time keeper.
 The null time keeper's getTime method always returns 0 and is
-intentended for when you do not want to use time stamping.
+intended for when you do not want to use time stamping.
 
-    let timeKeeperMaker = require('/path/to/null-time-keeper.js')
+    import timeKeeperMaker from '/path/to/null-time-keeper.js';
+    
     let timeKeeper = timeKeeperMaker()
     timeKeeper.getTime() // always 0
 
@@ -141,7 +144,7 @@ time in milliseconds. The typical time keeper's getTime method returns
 function, since the first getTime invocation on every subsequent
 invocation of the getTime method.
 
-    let timeKeeperMaker = require('/path/to/typical-time-keeper.js')
+    import timeKeeperMaker from '/path/to/typical-time-keeper.js';
 
     // create a new time keeper using Date.now to keep time
     let timeKeeper = timeKeeperMaker(Date.now)
@@ -155,6 +158,8 @@ created time keeper, before the first getTime invocation. Thus it
 is possible to reuse the same time keeper for multiple consecutive
 Salt Channel sessions.
 
+    import timeKeeperMaker from '/path/to/typical-time-keeper.js';
+    
     // create a new time keeper using Date.now to keep time
     let timeKeeper = timeKeeperMaker(Date.now)
     timeKeeper.getTime() // always 1
@@ -173,7 +178,8 @@ js/src/time contains a null and typical time checker. The null time
 checker's delayed method always returns false and is intended for
 when the peer does not support time stamping.
 
-    let timeCheckerMaker = require('/path/to/null-time-checker.js')
+    import timeCheckerMaker from '/path/to/null-time-checker.js';
+    
     let timeChecker = timeCheckerMaker()
     timeChecker.delayed() // always false
 
@@ -185,7 +191,8 @@ checker's delayed method always returns false on the first invocation.
 On subsequent invocation it returns true if the expected value of the
 time value exceeds the supplied value plus the threshold, otherwise false.
 
-    let timeCheckerMaker = require('/path/to/typical-time-checker.js')
+    import timeCheckerMaker from '/path/to/typical-time-checker.js';
+    
     let timeChecker = timeCheckerMaker(Date.now, 1000)
     timeChecker.delayed(1)  // false
     spinForTwoSeconds()
@@ -196,7 +203,8 @@ putting it into a state that matches that of a newly created time
 checker, before the first delayed invocation. Thus it is possible to
 reuse the same time checker for multiple consecutive Salt Channel sessions.
 
-    let timeCheckerMaker = require('/path/to/typical-time-checker.js')
+    import timeCheckerMaker from '/path/to/typical-time-checker.js';
+    
     let timeChecker = timeCheckerMaker(Date.now, 1000)
     timeChecker.delayed(1)  // always false
     spinForTwoSeconds()
@@ -381,7 +389,7 @@ Channel.
 Code Example With WebSocket
 ---------------------------
 
-    let SaltChannel = require('./saltchannel.js')
+    import SaltChannel from './saltchannel.js';
 
     let ws = new WebSocket(uri)
     ws.binaryType = "arraybuffer"
@@ -427,8 +435,11 @@ Code Example With WebSocket
 Testing
 -------
 
-The folder js/src-test contains more detailed information about the tests in the readme.md
-file. The implementation is tested using nodejs and is wrapped with Browserify in order to
-test in a browser. The nodejs tests in the folder js/src-test/tests uses a mocked WebSocket
-and verifies against the protocol specification. The browser tests communicates with the
+The folder js/src-test contains more detailed information about the tests in the readme.md file. 
+
+The implementation is tested using Node.js and a browser. 
+
+The Node.js tests in the folder js/src-test/tests use a mocked WebSocket
+and verify against the protocol specification. 
+The browser tests communicate with the
 [Java reference implementation](https://github.com/assaabloy-ppi/salt-channel) over WebSocket.

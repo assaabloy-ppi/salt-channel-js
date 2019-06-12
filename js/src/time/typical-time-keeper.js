@@ -1,4 +1,4 @@
-module.exports = (getCurrentTime) => {
+export default (getCurrentTime) => {
 
 	let epoch
 	function getTime() {

@@ -1,4 +1,4 @@
-module.exports = (getCurrentTime, threshold = 5000) => {
+export default (getCurrentTime, threshold = 5000) => {
 
 	let epoch
 

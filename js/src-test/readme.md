@@ -2,9 +2,9 @@ Test Coverage
 =============
 
 
-Run all of the tests in the folder js/src-test/tests with nodejs like this:
+Run all of the tests in the folder js/src-test/tests with Node.js like this:
 
-	    node run.js
+	    node -r esm run.js
 
 
 A1A2 Session Tests
@@ -151,21 +151,20 @@ side performs any crypto. The server side verifies messages against ArrayBuffers
 Tests in browser
 ----------------
 
-*browsertests/sessiontest.js*
+*browsertests/test.js*
 
-Tests are written in nodejs and run in the browser by opening
-index.html. In order to run the tests in a browser they are
-wrapped using [Browserify](http://browserify.org) like this:
+Tests are run in the browser by opening index.html.
 
-	$ browserify test.js -o bundle.js
+Due to the same-origin policy limitations files have to be served from 
+localhost HTTP server e.g. [Chrome Web Server](https://github.com/kzahel/web-server-chrome) or,
+in case of Firefox, the policy needs to be disabled:
+
+    about:config -> security.fileuri.strict_origin_policy -> false
 
 To run the tests make sure that /salt-channel/src-x/saltchannelx/ws/WsTestServer.java
 in the [Java reference implementation](https://github.com/assaabloy-ppi/salt-channel)
-is running on the local host, then open the index.html file in a browser.
-The index.html file in contains the bundle.js in a script tag, which runs test.js:
-
-	<script src='./bundle.js'> </script>
-
+is running on the localhost, then open the index.html file in a browser.
+The index.html file imports and executes the *run* function from test.js ES6 module.
 
 Test outcomes are written to the JavaScript console. The following tests are run:
 

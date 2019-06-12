@@ -1,26 +1,22 @@
-let saltchannel = require('../../src/saltchannel.js')
-let util = require('../../lib/util.js')
-let nacl = require('../../lib/nacl-fast.js')
+import saltchannel from './../../src/saltchannel.js';
+import * as util from './../../lib/util.js';
 
+const nacl = typeof module !== 'undefined' && module.exports ? require('../../lib/nacl-fast.js') : self.nacl;
 
-let clientSecret =
-  util.hex2Uint8Array('fd2956eb37782aabddc97eaf3b9e1b075f4976770db56c11e866e8763fa073d8' +
-            '9cace2ed6af2e108bbabc69c0bb7f3e62a4c0bf59ac2296811a09e480bf7b0f7')
-let clientSigKeyPair = nacl.sign.keyPair.fromSecretKey(clientSecret)
+let clientSecret = util.hex2Uint8Array('fd2956eb37782aabddc97eaf3b9e1b075f4976770db56c11e866e8763fa073d8' +
+            '9cace2ed6af2e108bbabc69c0bb7f3e62a4c0bf59ac2296811a09e480bf7b0f7');
+let clientSigKeyPair = nacl.sign.keyPair.fromSecretKey(clientSecret);
 let clientEphKeyPair = {
   publicKey: util.hex2Uint8Array('8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a'),
   secretKey: util.hex2Uint8Array('77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a')
-}
+};
 
-let msg = new Uint8Array([1,3,3,3,3,3])
+let msg = new Uint8Array([1,3,3,3,3,3]);
+let test;
+let multiCount;
 
-let test
-let multiCount
-
-let ws
-let sc
-newSaltChannel('a1a2')
-
+let ws;
+let sc;
 
 function handshake() {
   sc.handshake(clientSigKeyPair, clientEphKeyPair)
@@ -30,7 +26,7 @@ function a1a2() {
   sc.a1a2()
 }
 
-function newSaltChannel(test) {
+export function run(test) {
   newWebSocket(test)
   sc = saltchannel(ws)
   sc.setOnA2Response(onA2Response)
@@ -38,12 +34,11 @@ function newSaltChannel(test) {
   sc.setOnHandshakeComplete(onHandshakeComplete)
   sc.setOnMessage(onMessage)
   sc.setOnClose(onClose)
-
 }
 
 function newWebSocket(test) {
-  ws = new WebSocket('ws:localhost:2034')
-  ws.binaryType = 'arraybuffer'
+  ws = new WebSocket('ws:localhost:2034');
+  ws.binaryType = 'arraybuffer';
 
   ws.onopen = function(evt) {
     switch (test) {
@@ -59,17 +54,11 @@ function newWebSocket(test) {
   ws.onclose = function(evt) {
     switch (test) {
       case 'a1a2':
-        newSaltChannel('handshake')
+        run('handshake')
         break
     }
-
   }
 }
-
-
-
-
-
 
 function onA2Response(prots) {
   let success = true
@@ -94,7 +83,6 @@ function onSaltChannelError(err) {
   // err.message is always set
   ws.close() // So that no more messages arrive on a closed Salt Channel
 }
-
 
 function onHandshakeComplete() {
   test = 'AppPacket'

@@ -1,5 +1,5 @@
 // Takes a hex-string and returns a Uint8Array
-exports.hex2Uint8Array = (str) => {
+export const hex2Uint8Array = (str) => {
     str = str.trim().toLowerCase()
     if (str.substring(0,2) === '0x') {
         str = str.substring(2, str.length)
@@ -24,7 +24,7 @@ exports.hex2Uint8Array = (str) => {
 }
 
 // Takes a hex-string and returns an ArrayBuffer
-exports.hex2ab = (hex) => {
+export const hex2ab = (hex) => {
 	if (typeof hex !== 'string') {
 		throw new Error('Input must be string, was ' + typeof hex)
 	}
@@ -44,13 +44,13 @@ exports.hex2ab = (hex) => {
 }
 
 // Takes an ArrayBuffer and returns a hex-string
-exports.ab2hex = (buffer) => {
+export const ab2hex = (buffer) => {
     return Array.prototype.map.call(new Uint8Array(buffer),
     		x => ('00' + x.toString(16)).slice(-2)).join('');
 }
 
 // Compares two Uint8Arrays for byte equality
-exports.uint8ArrayEquals = (uints1, uints2) => {
+export const uint8ArrayEquals = (uints1, uints2) => {
 	if (!(uints1 instanceof Uint8Array) ||
 		!(uints2 instanceof Uint8Array)) {
 		throw new Error("Expected Uint8Arrays")
@@ -67,7 +67,7 @@ exports.uint8ArrayEquals = (uints1, uints2) => {
 }
 
 // Compares two ArrayBuffers for byte equality
-exports.bufferEquals = (buffer1, buffer2) => {
+export const bufferEquals = (buffer1, buffer2) => {
 	if (!(buffer1 instanceof ArrayBuffer) ||
 		!(buffer2 instanceof ArrayBuffer)) {
 		throw new Error("Expected ArrayBuffers")
@@ -87,7 +87,7 @@ exports.bufferEquals = (buffer1, buffer2) => {
 
 // Returns the number of ms since Unix epoch
 // Like Java's System.currentTimeMillis
-exports.currentTimeMs = () => {
+export const currentTimeMs = () => {
 	if (!Date.now) {
 		return new Date.getTime()
 	} else {
@@ -96,12 +96,12 @@ exports.currentTimeMs = () => {
 }
 
 // Returns true iff arg is a string
-exports.isString = (arg) => {
+export const isString = (arg) => {
 	return typeof arg === "string" || arg instanceof String
 }
 
 // Returns true iff arg is an array
-exports.isArray = (arg) => {
+export const isArray = (arg) => {
 	if (!Array.isArray) {
 	    return Object.prototype.toString.call(arg) === '[object Array]'
   	} else {
