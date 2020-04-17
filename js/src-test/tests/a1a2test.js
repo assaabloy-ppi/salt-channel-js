@@ -1,11 +1,11 @@
 import saltChannelSession from './../../src/saltchannel.js';
 import * as util from './../../lib/util.js';
-
-const nacl = require('./../../lib/nacl-fast.js')
+import nacl from './../../lib/nacl-fast-es.js';
 
 let serverSecret =
 	util.hex2Uint8Array('7a772fa9014b423300076a2ff646463952f141e2aa8d98263c690c0d72eed52d' +
 						'07e28d4ee32bfdc4b07d41c92193c0c25ee6b3094c6296f373413b373d36168b')
+
 let serverSigKeyPair = nacl.sign.keyPair.fromSecretKey(serverSecret)
 
 let mockSocket = {

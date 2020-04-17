@@ -1,8 +1,7 @@
 import saltChannelSession from './../../src/saltchannel.js';
 import * as util from './../../lib/util.js';
+import nacl from './../../lib/nacl-fast-es.js';
 import getTimeChecker from './../../src/time/typical-time-checker.js';
-
-const nacl = require('./../../lib/nacl-fast.js')
 
 let clientSecret =
     util.hex2Uint8Array('fd2956eb37782aabddc97eaf3b9e1b075f4976770db56c11e866e8763fa073d8' +
