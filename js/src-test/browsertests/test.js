@@ -1,7 +1,6 @@
 import saltchannel from './../../src/saltchannel.js';
 import * as util from './../../lib/util.js';
-
-const nacl = typeof module !== 'undefined' && module.exports ? require('../../lib/nacl-fast.js') : self.nacl;
+import nacl from './../../lib/nacl-fast-es.js';
 
 let clientSecret = util.hex2Uint8Array('fd2956eb37782aabddc97eaf3b9e1b075f4976770db56c11e866e8763fa073d8' +
             '9cace2ed6af2e108bbabc69c0bb7f3e62a4c0bf59ac2296811a09e480bf7b0f7');

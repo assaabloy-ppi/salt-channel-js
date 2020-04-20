@@ -1,9 +1,8 @@
 import * as util from './../lib/util.js';
+import nacl from './../lib/nacl-fast-es.js';
 import getTimeKeeper from './time/typical-time-keeper.js';
 import getTimeChecker from './time/typical-time-checker.js';
 import getNullTimeChecker from './time/null-time-checker.js';
-
-const nacl = typeof module !== 'undefined' && module.exports ? require('./../lib/nacl-fast.js') : self.nacl;
 
 /**
  * JavaScript implementation of Salt Channel v2

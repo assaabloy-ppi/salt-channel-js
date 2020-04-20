@@ -1,5 +1,5 @@
-(function(nacl) {
-'use strict';
+const nacl = {};
+export default nacl;
 
 // Ported in 2014 by Dmitry Chestnykh and Devi Mandiri.
 // Public domain.
@@ -2041,12 +2041,11 @@ function unpackneg(r, p) {
 }
 
 function crypto_sign_open(m, sm, n, pk) {
-  var i, mlen;
+  var i;
   var t = new Uint8Array(32), h = new Uint8Array(64);
   var p = [gf(), gf(), gf(), gf()],
       q = [gf(), gf(), gf(), gf()];
 
-  mlen = -1;
   if (n < 64) return -1;
 
   if (unpackneg(q, pk)) return -1;
@@ -2068,8 +2067,7 @@ function crypto_sign_open(m, sm, n, pk) {
   }
 
   for (i = 0; i < n; i++) m[i] = sm[i + 64];
-  mlen = n;
-  return mlen;
+  return n;
 }
 
 var crypto_secretbox_KEYBYTES = 32,
@@ -2373,5 +2371,3 @@ nacl.setPRNG = function(fn) {
     }
   }
 })();
-
-})(typeof module !== 'undefined' && module.exports ? module.exports : (self.nacl = self.nacl || {}));

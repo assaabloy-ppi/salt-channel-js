@@ -1,9 +1,8 @@
 import saltChannelSession from './../../src/saltchannel.js';
 import * as util from './../../lib/util.js';
+import nacl from './../../lib/nacl-fast-es.js';
 import getTimeKeeper from './../../src/time/typical-time-keeper.js';
 import getNullTimeKeeper from './../../src/time/null-time-keeper.js';
-
-const nacl = require('./../../lib/nacl-fast.js')
 
 
 const session1M1Bytes = util.hex2ab('534376320100000000008520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a')
