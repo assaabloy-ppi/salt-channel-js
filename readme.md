@@ -1,8 +1,9 @@
 salt-channel-js
 ===============
 
-A JavaScript implementation of a [Salt Channel](https://github.com/assaabloy-ppi/salt-channel/) v2;
-client-side code that connects on top of WebSocket with binaryType set to "arraybuffer".
+A JavaScript implementation of a [Salt Channel](https://github.com/assaabloy-ppi/salt-channel/) client.
+Client-side code that connects on top of WebSocket.
+
 
 Table of Contents
 =================
@@ -30,8 +31,6 @@ Table of Contents
 
 Status
 ======
-
-WORK IN PROGRESS.
 
 Log Entries
 -----------
