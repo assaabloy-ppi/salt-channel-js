@@ -83,7 +83,7 @@ Download the source code and include using import.
 Usage example
 -------------
 
-There is a simple example in the [example.html]() file showing how to establish Salt Channel connection over WS and/or BLE from within a web browser.
+There is a simple example in the [example.html](example.html) file showing how to establish Salt Channel connection over WS and/or BLE from within a web browser.
 
 The easiest way to run it is to install a lightweight HTTP server e.g. [http-server](https://www.npmjs.com/package/http-server) based on [Node.js](https://nodejs.org/en/download/).
  
