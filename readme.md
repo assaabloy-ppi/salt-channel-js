@@ -2,7 +2,7 @@ salt-channel-js
 ===============
 
 A JavaScript implementation of a [Salt Channel](https://github.com/assaabloy-ppi/salt-channel/) client.
-Client-side code that connects on top of WebSocket.
+Client-side code that connects on top of WebSocket or BLE (using [Web Bluetooth API](https://webbluetoothcg.github.io/web-bluetooth/)).
 
 
 Table of Contents
@@ -12,6 +12,7 @@ Table of Contents
   * [Log Entries](#log-entries)
 * [Dependencies](#dependencies)
 * [Usage](#usage)
+  * [Usage example](#usage-example)
   * [Method overview](#method-overview)
   * [Initializing a Salt Channel](#initializing-a-salt-channel)
   * [Time keeping](#time-keeping)
@@ -34,6 +35,8 @@ Status
 
 Log Entries
 -----------
+
+2020-11-20, Jakub, BLE transport using Web Bluetooth API.
 
 2019-06-12, Jakub, Converted from CommonJS into ES6 module.
 
@@ -77,7 +80,28 @@ Download the source code and include using import.
 
     import saltchannel from 'path/to/saltchannel.js';
 
+Usage example
+-------------
 
+There is a simple example in the [example.html]() file showing how to establish Salt Channel connection over WS and/or BLE from within a web browser.
+
+The easiest way to run it is to install a lightweight HTTP server e.g. [http-server](https://www.npmjs.com/package/http-server) based on [Node.js](https://nodejs.org/en/download/).
+ 
+ `$ npm install http-server -g`
+ 
+Since Web Bluetooth API can only be used from HTTPS context you need to have a certificate for the server.
+You can generate a self-signed certificate using [openSSL](https://wiki.openssl.org/index.php/Binaries).
+
+ `$ openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem`
+ 
+You then should start the server from the main project directory.
+
+ `$ http-server -S -C cert.pem`
+ 
+By default the server is listening on port 8080. In your Chrome browser go to:
+
+ `https://localhost:8080/example.html`
+ 
 
 Method overview
 ---------------

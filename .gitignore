@@ -1,6 +1,11 @@
 *.class
 *.project
 *.classpath
+*.pem
 
 *.DS_Store
 /java/
+/.idea/
+/package-lock.json
+/node_modules/
+/js/src-test/node_modules/
