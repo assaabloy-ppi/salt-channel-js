@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Salt Channel example</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+        <script type="module">
+            import nacl from "./js/lib/nacl-fast-es.js";
+            import * as BleSocket from './js/lib/blesocket.js';
+            import SaltChannel from './js/src/saltchannel.js';
+
+            const MAX_RETRIES = 3;
+            const START_DELAY = 500;
+
+            console.log("Ready for some action");
+
+            window.connectToWs = function () {
+                connectToWsServer("ws://127.0.0.1:2034/");
+            };
+
+            async function connectToWsServer(uri) {
+                console.log("connectToWsServer: " + uri);
+                let socket = await setupWebsocket(uri);
+                return await setupSaltChannel(socket);
+            }
+
+            window.connectToBle = function () {
+                connectToBleDevice();
+            };
+
+            async function connectToBleDevice() {
+                console.log("connectToBleDevice");
+                let filterOptions = BleSocket.createFilterOptions('AA ');
+                let device = await navigator.bluetooth.requestDevice(filterOptions);
+                let bleSocket = await setupBleSocket(device);
+                return await setupSaltChannel(bleSocket)
+            }
+
+            async function setupBleSocket(device) {
+                console.log("setupBleSocket for device: " + device.name);
+                try {
+                    return await BleSocket.connect(device);
+                }
+                catch (e){
+                    console.log("Could not connect. Error:\n", e);
+                }
+                let filterOptions = BleSocket.createFilterOptions(device.name);
+                let escalatedDevice = await navigator.bluetooth.requestDevice(filterOptions);
+                return await tryConnect(escalatedDevice, MAX_RETRIES, START_DELAY);
+            }
+
+            async function tryConnect(device, maxRetries, startDelay) {
+                let delay = startDelay;
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        return await BleSocket.connect(device);
+                    }
+                    catch (e){
+                        console.warn(e)
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay = delay*2;
+                }
+                throw 'Error: Did not succeed in connecting during '+maxRetries+' tries';
+            }
+
+            async function setupWebsocket(uri) {
+                return await new Promise(function (resolve, reject) {
+                        try {
+                            const webSocket = new WebSocket(uri);
+                            webSocket.binaryType = "arraybuffer";
+
+                            webSocket.onclose = function(){
+                                reject("Closed during connection");
+                            };
+
+                            webSocket.onerror = function(){
+                                reject("Error during connection: " + uri);
+                            };
+
+                            webSocket.onopen = function() {
+                                webSocket.onclose = function(){
+                                    console.log("Closed");
+                                };
+                                resolve(webSocket)
+                            };
+                        } catch (e) {
+                            reject(e)
+                        }
+                    }
+                );
+            }
+
+            async function setupSaltChannel(socket, clientSigKeyPair = nacl.sign.keyPair(), clientEphKeyPair = nacl.box.keyPair()) {
+                return await new Promise(async function (resolve, reject) {
+                        try {
+                            let sc = SaltChannel(socket);
+                            let timeout = setTimeout(() => reject("Timeout during salt channel handshake"), 1500);
+                            sc.setOnHandshakeComplete(function(){
+                                console.log("Handshake complete")
+                                clearTimeout(timeout);
+                                resolve(sc)
+                            });
+                            sc.setOnError((e) => console.error(e));
+                            sc.setOnClose(() => console.log("Connection closed"));
+                            sc.handshake(clientSigKeyPair, clientEphKeyPair);
+                        } catch (e) {
+                            reject(e)
+                        }
+                    }
+                );
+            }
+
+            function checkBluetoothAvailability() {
+                BleSocket.listenToBluetoothAvailability((bluetoothAvailability) => {
+                    let state = Object.keys(BleSocket.BluetoothAvailability)[bluetoothAvailability];
+                    document.getElementById("bluetooth_availability").innerHTML = "Bluetooth state: " + state;
+                });
+            }
+            checkBluetoothAvailability();
+
+        </script>
+
+    </head>
+    <body>
+        <div>
+            <h1>Salt Channel example</h1>
+
+            <h3>
+                <span id="bluetooth_availability"></span>
+            </h3>
+
+            <div>
+                <h4>Bluetooth connection</h4>
+                <button type="button" onclick="connectToBle()">Connect via BLE</button>
+            </div>
+
+            <div>
+                <h4>WebSocket connection</h4>
+                <div>
+                    <button type="button" onclick="connectToWs()">Connect via WebSocket</button>
+                </div>
+            </div>
+
+        </div>
+    </body>
+</html>
