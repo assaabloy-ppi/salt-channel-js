@@ -698,8 +698,8 @@ export default function(ws, timeKeeper, timeChecker) {
 	}
 
 	function setInt32(uints, data, offset) {
-		let int32 = new Int32Array([data])
-		uints.set(int32, offset)
+		let view = new DataView(uints.buffer);
+		view.setUint32(offset, data, true);
 	}
 
 	function getUint16(uints, offset) {
@@ -711,8 +711,8 @@ export default function(ws, timeKeeper, timeChecker) {
 	}
 
 	function setUint16(uints, data, offset) {
-		let uint16 = new Uint16Array([data])
-		uints.set(uint16, offset)
+		let view = new DataView(uints.buffer);
+		view.setUint16(offset, data, true);
 	}
 
 	function send(last, arg) {
