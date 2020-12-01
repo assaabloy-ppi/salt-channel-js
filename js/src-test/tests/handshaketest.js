@@ -72,6 +72,16 @@ let multiAppPacketCount
 let multiAppPacketFailed
 let lastFlag
 
+let bigPayload = util.hex2Uint8Array('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' +
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbcccccccccccccccccccccccccccccccccccccccc' +
+    'ddddddddddddddddddddddddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' +
+    'ffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000' +
+    '11111111111111111111111111111111111111112222222222222222222222222222222222222222' +
+    '33333333333333333333333333333333333333334444444444444444444444444444444444444444' +
+    '55555555555555555555555555555555555555556666666666666666666666666666666666666666' +
+    '77777777777777777777777777777777777777778888888888888888888888888888888888888888' +
+    '9999999999999999999999999999999999999999ffffffffffffffffffffffffffffffffffffffff')
+
 let timeKeeper
 let timeChecker
 
@@ -92,6 +102,8 @@ exports.run = () => {
     testSendMultiAppPacket1()
 
     testSendMultiAppPacket2()
+
+    testSendBigMultiAppPacket()
 
     testReceiveMultiAppPacket()
 
@@ -212,6 +224,17 @@ function testSendMultiAppPacket2() {
     mockSocket.send = validateMultiAppPacket
 
     sendMultiAppPacket2()
+}
+
+function testSendBigMultiAppPacket() {
+    currentTest = 'testSendBigMultiAppPacket'
+    testCount++
+
+    newSaltChannelAndHandshake(doNothing, validateM1NoServSigKey)
+
+    mockSocket.send = validateBigMultiAppPacket
+
+    sendBigMultiAppPacket()
 }
 
 function testReceiveMultiAppPacket() {
@@ -564,6 +587,14 @@ function sendMultiAppPacket2() {
         return;
     }
     sc.send(false, new Uint8Array([0]), new Uint8Array([1]).buffer)
+}
+
+function sendBigMultiAppPacket() {
+    if (sc.getState() !== 'ready') {
+        outcome(false, 'Status: ' + sc.getState())
+        return;
+    }
+    sc.send(false, new Uint8Array([0]), bigPayload)
 }
 
 function receiveMultiAppPacket() {
@@ -1242,6 +1273,56 @@ function validateMultiAppPacket(message) {
 
     if (multiAppPacket[13] !== 1) {
         outcome(false, '  Unexpected data, expected 1, was ' + multiAppPacket[13])
+        return
+    }
+
+    outcome(true)
+}
+
+function validateBigMultiAppPacket(message) {
+    if (!(message instanceof ArrayBuffer)) {
+        outcome(false, '  Expected ArrayBuffer from Salt Channel')
+        return
+    }
+    let encryptedMessage = new Uint8Array(message)
+    let multiAppPacket = decrypt(encryptedMessage)
+
+    if (multiAppPacket.length !== (bigPayload.length + 13)) {
+        outcome(false, '  Expected MultiAppPacket.length ' + (bigPayload.length + 13) + ', was ' + multiAppPacket.length)
+        return
+    }
+
+    if (multiAppPacket[6] !== 2 || multiAppPacket[7] !== 0) {
+        outcome(false, '  Unexpected count, expected 2 0, was ' +
+            multiAppPacket[6] + ' ' + multiAppPacket[7])
+        return
+    }
+
+    if (multiAppPacket[8] !== 1 || multiAppPacket[9] !== 0) {
+        outcome(false, '  Unexpected length, expected 1 0, was ' +
+            multiAppPacket[8] + ' ' + multiAppPacket[9])
+        return
+    }
+
+    if (multiAppPacket[10] !== 0) {
+        outcome(false, '  Unexpected data, expected 0, was ' + multiAppPacket[10])
+        return
+    }
+
+    let packetLength = new Uint8Array(2)
+    let view = new DataView(packetLength.buffer);
+    view.setUint16(0, bigPayload.length, true);
+
+    if (multiAppPacket[11] !== packetLength[0] || multiAppPacket[12] !== packetLength[1]) {
+        outcome(false, '  Unexpected length, expected ' + packetLength[0] + packetLength[1] + ', was ' +
+            multiAppPacket[11] + ' ' + multiAppPacket[12])
+        return
+    }
+
+    let payload = multiAppPacket.slice(13)
+
+    if (!util.uint8ArrayEquals(payload, bigPayload)) {
+        outcome(false, '  Unexpected data, expected ' + util.ab2hex(bigPayload.buffer) + ', was ' + util.ab2hex(payload.buffer))
         return
     }
 
